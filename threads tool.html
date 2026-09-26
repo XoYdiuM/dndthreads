@@ -1,0 +1,1223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Threads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,600;1,400&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style id="css">:root{
+  --ground:#E6E4DE; --ink:#23262E; --muted:#686C76; --rule:#C9C6BD; --band:rgba(35,38,46,.06); --field:#EFEDE8;
+  --serif:"Alegreya",Georgia,"Times New Roman",serif;
+  --sans:"Alegreya Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#182030;--ink:#E7E5DF;--muted:#9CA2B0;--rule:#34405A;--band:rgba(231,229,223,.07);--field:#1F2940;}}
+:root[data-theme="dark"]{--ground:#182030;--ink:#E7E5DF;--muted:#9CA2B0;--rule:#34405A;--band:rgba(231,229,223,.07);--field:#1F2940;}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding:36px 22px 64px}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(2.2rem,6vw,3.4rem);line-height:1.02;letter-spacing:-.01em;margin:0 0 .3em}
+.lede{font-family:var(--serif);font-size:1.15rem;color:var(--muted);max-width:56ch;margin:0 0 22px}
+button,select,input,textarea{font:inherit;color:var(--ink)}
+.btn{font:500 .93rem var(--sans);background:transparent;border:1px solid var(--rule);border-radius:7px;padding:5px 12px;cursor:pointer;color:var(--ink)}
+.btn:hover{border-color:var(--muted)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.btn.quiet{border-color:transparent;padding-left:6px;padding-right:6px;text-decoration:underline;text-underline-offset:3px}
+.btn.danger{color:#B23B3B;border-color:currentColor}
+.btn:disabled{opacity:.4;cursor:default}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 14px}
+.bar select{background:var(--field);border:1px solid var(--rule);border-radius:7px;padding:5px 8px;font-weight:500;max-width:15em}
+.bar .status{color:var(--muted);font-size:.9rem;margin-left:auto}
+.notice{border-left:3px solid var(--ink);padding:6px 12px;margin:0 0 12px;font-size:.95rem;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.follow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 14px}
+.follow input{background:var(--field);border:1px solid var(--rule);border-radius:7px;padding:5px 9px;width:14em}
+.chip{font:500 .9rem var(--sans);background:transparent;border:1px solid var(--rule);border-radius:999px;padding:4px 12px 4px 9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;color:var(--ink)}
+.chip .sw{width:20px;height:0;border-top:3px dashed var(--c)}
+.chip[aria-pressed="false"]{opacity:.45}
+.found{color:var(--muted);font-size:.92rem}
+.found button{font:500 .86rem var(--sans);background:transparent;border:1px solid var(--rule);border-radius:999px;padding:0 9px;margin:2px 3px 2px 0;cursor:pointer;color:var(--ink)}
+.board{display:flex;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.lanes{flex:0 0 96px;position:relative}
+.lanes span{position:absolute;left:0;right:6px;transform:translateY(-50%);font:700 .9rem var(--sans);line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scroll{flex:1;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;outline:none}
+.scroll:focus-visible{box-shadow:inset 0 0 0 2px var(--ink)}
+svg.tl{display:block}
+.dayn{font:500 12px var(--sans);fill:var(--muted)} .dayn.sel{fill:var(--ink);font-weight:700}
+.node,.cell{cursor:pointer}
+.legend{display:flex;flex-wrap:wrap;gap:18px;margin:12px 0 30px;font-size:.88rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.detail{max-width:74ch}
+.dhead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.dhead h2{font-family:var(--serif);font-weight:600;font-size:2rem;margin:0}
+.dhead .status{color:var(--muted);font-size:.96rem}
+.steps{margin-left:auto;display:flex;gap:6px}
+.event{border-left:3px solid var(--pc);padding:2px 0 2px 16px;margin:20px 0}
+.event .who{font:700 .9rem var(--sans);color:var(--pc)}
+.event h3{font-family:var(--serif);font-weight:600;font-size:1.4rem;line-height:1.2;margin:2px 0}
+.event .where{font-family:var(--serif);font-style:italic;color:var(--muted);margin:0 0 8px}
+.event p.sum{font-family:var(--serif);font-size:1.07rem;line-height:1.6;margin:0 0 8px}
+.beats{list-style:none;counter-reset:b;margin:10px 0;padding:0}
+.beats li{counter-increment:b;position:relative;padding:0 0 6px 2.1em;font-family:var(--serif);font-size:1.02rem;line-height:1.45}
+.beats li::before{content:counter(b);position:absolute;left:0;top:.05em;width:1.5em;text-align:right;font:500 .82rem var(--sans);color:var(--pc)}
+.q{margin:12px 0 4px}.q blockquote{font-family:var(--serif);font-style:italic;font-size:1.05rem;margin:0}
+.q blockquote::before{content:"“"}.q blockquote::after{content:"”"}
+.q figcaption{font:500 .87rem var(--sans);color:var(--muted);margin-top:2px}
+.note{font-size:.88rem;color:var(--muted);margin:6px 0 0}
+.secret{font-size:.92rem;border:1px dashed var(--rule);border-radius:6px;padding:6px 10px;margin:10px 0 0}
+.secret b{font-weight:700}
+.daynote{font-family:var(--serif);font-size:1.05rem;border-left:3px solid var(--rule);padding:2px 0 2px 16px;margin:14px 0}
+.cross h4{font-family:var(--serif);font-weight:600;font-size:1.18rem;margin:26px 0 8px}
+.cross ul{margin:0;padding-left:1.1em}.cross li{margin:0 0 6px;font-family:var(--serif);font-size:1.04rem}
+mark{background:color-mix(in srgb,var(--ink) 15%,transparent);color:inherit;border-radius:3px;padding:0 2px}
+.empty{font-family:var(--serif);color:var(--muted);font-size:1.05rem}
+.form{display:grid;gap:12px;margin:14px 0}
+.form label{display:grid;gap:4px;font:500 .9rem var(--sans)}
+.form .row{display:flex;flex-wrap:wrap;gap:12px}.form .row>label{flex:1 1 9em}
+.form .hint{font-weight:400;color:var(--muted);font-size:.84rem}
+input[type=text],input[type=number],select,textarea{background:var(--field);border:1px solid var(--rule);border-radius:7px;padding:6px 9px}
+textarea{min-height:5.2em;resize:vertical;line-height:1.45;font-family:var(--serif);font-size:1rem}
+input[type=color]{width:38px;height:32px;padding:2px;border:1px solid var(--rule);border-radius:7px;background:var(--field)}
+.settings{border:1px solid var(--rule);border-radius:10px;padding:4px 16px 12px;margin:0 0 18px}
+.settings summary{cursor:pointer;font:700 .98rem var(--sans);padding:8px 0}
+.settings h3{font-family:var(--serif);font-weight:600;font-size:1.15rem;margin:16px 0 6px}
+.tbl{display:grid;gap:8px}
+.tbl .r{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tbl .r input[type=text]{flex:1 1 10em}.tbl .r input.cast{flex:2 1 16em}
+.tbl .r input[type=number]{width:5.2em}
+.evlist{margin:6px 0 14px;padding:0;list-style:none}
+.evlist li{margin:4px 0}
+.evlist .btn{text-align:left}
+dialog{border:1px solid var(--rule);border-radius:12px;background:var(--ground);color:var(--ink);max-width:min(560px,92vw);padding:18px 20px}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+dialog h2{font-family:var(--serif);font-weight:600;font-size:1.5rem;margin:0 0 10px}
+dialog .acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:14px}
+dialog textarea{width:100%;min-height:9em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem}
+.lib{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.lib li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:1px solid var(--rule);padding:6px 0}
+.lib li .t{flex:1 1 12em;font-family:var(--serif);font-size:1.08rem}
+.lib li .t small{display:block;font-family:var(--sans);color:var(--muted);font-size:.82rem}
+.foot{margin-top:44px;font-size:.88rem;color:var(--muted);max-width:74ch}
+.err{color:#B23B3B;font-size:.9rem}
+@media (max-width:600px){.wrap{padding:26px 14px 48px}.lanes{flex-basis:74px}.steps{margin-left:0}.bar .status{margin-left:0;width:100%}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+.char{border-top:1px solid var(--rule);padding:8px 0}
+.char .stints{display:grid;gap:6px;margin:6px 0 0 14px}
+.roster{margin:0;padding-left:1.1em}.roster li{margin:0 0 6px;font-family:var(--serif);font-size:1.04rem}
+dialog{max-height:88vh;overflow:auto}
+dialog h3{font-family:var(--serif);font-weight:600;font-size:1.12rem;margin:16px 0 4px}
+.help p{margin:0 0 6px;font-family:var(--serif);font-size:1.02rem;line-height:1.5}
+.mtools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 6px}
+.merge{max-height:52vh;overflow-y:auto;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:0 2px 6px}
+.mlist{list-style:none;margin:0;padding:0}
+.mi{border-bottom:1px solid var(--rule);padding:7px 0}.mi:last-child{border-bottom:0}
+.mi label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.mi input{margin-top:.35em;flex:none}
+.mi b{font-weight:500}
+.mi small{display:block;color:var(--muted);font-size:.85rem}
+.mi.off{opacity:.6}
+.mi details{margin:4px 0 0 26px;font-size:.9rem}
+.mi summary{cursor:pointer;color:var(--muted)}
+.mi details ul{margin:4px 0;padding-left:1.1em;font-family:var(--serif)}
+.loc{font:500 9.5px var(--sans);fill:var(--muted)}
+.event .loct{font:500 .86rem var(--sans);color:var(--pc);margin:-4px 0 8px}
+.ck{display:inline-flex;align-items:center;gap:5px;font:400 .88rem var(--sans);white-space:nowrap}
+.tbl .r.flux{margin:-2px 0 6px 0;padding-left:12px;border-left:2px solid var(--rule)}
+.tbl .r.flux label{display:inline-flex;align-items:center;gap:6px;font:400 .9rem var(--sans)}
+.rost{margin:10px 0 14px}
+.rost h5{font:700 .92rem var(--sans);margin:0 0 6px}
+.pchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pchips.dep{margin-top:6px}
+.pchips .lbl{font:500 .86rem var(--sans);color:var(--muted);margin-right:2px}
+.pchip{font:500 .92rem var(--sans);background:transparent;border:1px solid var(--rule);border-radius:999px;padding:3px 11px;cursor:pointer;color:var(--ink);display:inline-flex;align-items:baseline;gap:6px}
+.pchip:hover{border-color:var(--muted)}
+.pchip small{font-weight:400;color:var(--muted);font-size:.8rem}
+.pchips.dep .pchip{border-style:dashed}
+.addp{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 0;font-size:.92rem;color:var(--muted)}
+.addp input[type=text]{flex:1 1 10em;color:var(--ink)}
+.roster .dep{font-size:.95rem;color:var(--muted);margin-top:2px}
+.prow{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.prow label{flex:1 1 16em}
+.laneblk{margin:14px 0 0;padding:6px 0 6px 12px;border-left:3px solid transparent;border-radius:2px}
+.laneblk.pick{border-left-color:var(--pc);background:var(--band)}
+.colhit{cursor:pointer}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--rule);margin:2px 0 12px}
+.tab{font:500 .92rem var(--sans);background:transparent;border:0;border-bottom:2px solid transparent;padding:6px 10px;margin-bottom:-1px;cursor:pointer;color:var(--muted)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.tab:hover{color:var(--ink)}
+.tabp>.note:first-child{margin-top:0}
+.sm{display:inline-flex;align-items:center;gap:6px;font:400 .9rem var(--sans);white-space:nowrap}
+.lrow{padding:6px 0;border-bottom:1px solid var(--rule)}
+.lrow .lbtns{display:inline-flex;gap:2px;margin-left:auto}
+.sp{border:1px solid var(--rule);border-left:4px solid var(--pc);border-radius:8px;padding:10px 12px;display:grid;gap:8px}
+.sp .fprev{margin:0}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:7px;overflow:hidden}
+.seg button{font:500 .88rem var(--sans);background:transparent;border:0;border-left:1px solid var(--rule);padding:4px 11px;cursor:pointer;color:var(--ink)}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--ground)}
+.lops{display:flex;flex-wrap:wrap;gap:2px;margin-top:4px}
+.lops .btn{font-size:.84rem;color:var(--muted)}
+#tl .dayn,#tl .spanr,#tl .loc,#tl .slowbar,#tl path{pointer-events:none}
+.laneblk .btn.hi{outline:2px solid var(--pc);outline-offset:1px}
+details.event.fold>summary{list-style:none;cursor:pointer;display:block}
+details.event.fold>summary::-webkit-details-marker{display:none}
+details.event.fold>summary:focus-visible{outline:2px solid var(--pc);outline-offset:4px;border-radius:2px}
+details.event.fold .more{display:inline-flex;align-items:center;gap:8px;font:500 .86rem var(--sans);color:var(--pc);margin:0 0 2px}
+details.event.fold .more::before{content:"";width:0;height:0;border-left:5px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform .15s}
+details.event.fold[open] .more::before{transform:rotate(90deg)}
+details.event.fold .more .hide,details.event.fold[open] .more .show{display:none}
+details.event.fold[open] .more .hide{display:inline}
+details.event.fold .more mark{font-weight:400}
+details.event.fold .evbody{padding-top:6px}
+details.event.fold>summary p.sum{margin-bottom:4px}
+.foldbar{display:flex;justify-content:flex-end;margin:6px 0 -8px}
+</style>
+</head>
+<body>
+<script type="application/json" id="seed">{"format":"threads-workspace","version":1,"current":"tl-salt-road-example","timelines":[{"format":"threads-timeline","version":1,"id":"tl-salt-road-example","title":"The Salt Road","subtitle":"An example campaign for Threads: three parties, one coast, and two places where time runs strangely. Choose Edit to try things out, or New timeline to start your own.","dayLabel":"Day","dayCount":16,"updated":"2026-09-26T04:43:48.000Z","lanes":[{"id":"A","name":"The Lantern Company","color":"#B5523B","now":14,"roster":true},{"id":"B","name":"The Gull Street Crew","color":"#2F6F8F","now":14,"roster":true},{"id":"C","name":"The Thornwalkers","color":"#5E7F3A","now":13,"roster":true},{"id":"W","name":"World events","color":"#8A7A5C","now":null,"roster":false}],"events":[{"id":"e-a1","lane":"A","day":1,"title":"The lantern-keeper’s summons","where":"Harrowgate, the Lantern Guildhall","status":"confirmed","summary":"Old Borin calls in the company: the lighthouses along the Salt Road have gone dark, one by one, and the Guild wants to know why.","beats":["Borin lays out the map: seven lighthouses, four already dark","Tamsin recognises the Guild seal on a letter nobody admits sending","The company agrees to walk the road and relight what they can"],"quotes":[{"who":"Old Borin","text":"A dark lighthouse is a promise broken. Seven of them is a declaration."}],"notes":"","secret":""},{"id":"e-a2","lane":"A","day":2,"title":"Out through the salt gate","where":"The Salt Road, mile one","status":"confirmed","summary":"The company leaves Harrowgate at dawn, the same morning the tide fails to come in.","beats":["Wren buys a map from a pedlar who swears the third lighthouse is haunted","Kestrel spots someone following them from the city walls"],"quotes":[],"notes":"","secret":""},{"id":"e-a4","lane":"A","day":4,"title":"The drowned waystation","where":"The Salt Road, the Brinewell waystation","status":"confirmed","summary":"The first waystation is flooded to the rafters, though it hasn’t rained in weeks.","beats":["They find the keeper’s logbook, water-stained but readable","The last entry names a visitor: “a woman with a lantern that gives no light”"],"quotes":[{"who":"Wren","text":"Water doesn’t climb stairs on its own."}],"notes":"","secret":""},{"id":"e-a6","lane":"A","day":6,"title":"Letters from Gull Street","where":"Brinewell, the ferry landing","status":"confirmed","summary":"A runner brings a letter from the Gull Street Crew: they’re chasing the same trouble from the sea side.","beats":["Pip’s letter describes the tide pulling away from the harbour like a breath held","Kestrel knows Pip from the old days, and goes quiet"],"quotes":[],"notes":"","secret":""},{"id":"e-a7","lane":"A","day":7,"title":"Kestrel goes her own way","where":"Brinewell, the ferry landing","status":"confirmed","summary":"Kestrel takes the ferry back to Harrowgate to join the Gull Street Crew. She says they’ll need someone who knows the docks.","beats":["A tense farewell with Tamsin","Borin gives her the Guild’s spare lantern"],"quotes":[{"who":"Kestrel","text":"You walk the road. I’ll watch the water. We’ll meet in the middle."}],"notes":"","secret":""},{"id":"e-a8","lane":"A","day":8,"title":"The toll bridge at Marrow Ford","where":"Marrow Ford","status":"confirmed","summary":"Someone has barricaded the only bridge across the Marrow, and they’re not asking for coin.","beats":["The bridge-wardens have been replaced by strangers in grey","Tamsin talks their way into a night’s truce"],"quotes":[],"notes":"","secret":""},{"id":"e-a11","lane":"A","day":11,"title":"Holding the bridge","where":"Marrow Ford","status":"confirmed","summary":"The grey wardens attack at the height of the Festival of Tides. Old Borin holds the bridge so the others can cross.","beats":["Wren relights the ford’s beacon under fire","Borin falls holding the bridge, lantern in hand","The grey wardens scatter when the beacon catches"],"quotes":[{"who":"Old Borin","text":"Go on. Somebody has to be the light."}],"notes":"","secret":""},{"id":"e-a13","lane":"A","day":13,"title":"Out of the Sleeping Court","where":"The Salt Road, the edge of the Hollow Wood","status":"confirmed","summary":"Two travellers stumble out of the tree line onto the road: the Thornwalkers, who have been gone far longer than they think.","beats":["Isolde insists only a few days have passed","Tamsin shows her the date on Borin’s grave marker","Isolde asks to join the company"],"quotes":[],"notes":"","secret":""},{"id":"e-a14","lane":"A","day":14,"title":"Council at the Tidewater Inn","where":"Tidewater, the Tidewater Inn","status":"confirmed","summary":"Both companies meet for the first time and compare everything they know.","beats":["The woman with the dark lantern has been seen on the road and at sea","The lighthouses are going out in the order of an old sea-shanty"],"quotes":[{"who":"Tamsin","text":"So we’re not following her. We’re following a song."}],"notes":"","secret":""},{"id":"e-a16","lane":"A","day":16,"title":"The Salt Road opens","where":"Tidewater","status":"upcoming","summary":"The plan is to relight all seven lighthouses in one night, singing the shanty backwards.","beats":[],"quotes":[],"notes":"","secret":""},{"id":"e-b1","lane":"B","day":1,"title":"A job on Gull Street","where":"Harrowgate docks","status":"confirmed","summary":"The harbourmaster hires Pip’s crew to find out why ships keep running aground on a harbour with no rocks.","beats":["Doss finds fresh scrape marks on a hull, as if the seabed rose to meet it"],"quotes":[{"who":"Pip","text":"No rocks, no storms, and three wrecks in a week. Somebody’s lying to the sea."}],"notes":"","secret":""},{"id":"e-b3","lane":"B","day":3,"title":"Marguerite signs on","where":"Harrowgate, the Gull and Anchor","status":"confirmed","summary":"Marguerite, a retired diver with a debt to the harbourmaster, joins the crew.","beats":["She’s the only one who has dived the harbour since the tide failed"],"quotes":[],"notes":"","secret":""},{"id":"e-b6","lane":"B","day":6,"title":"A letter to the Lantern Company","where":"Harrowgate docks","status":"confirmed","summary":"Pip writes to the Lantern Company after hearing they’re on the Salt Road.","beats":[],"quotes":[],"notes":"","secret":""},{"id":"e-b7","lane":"B","day":7,"title":"A new face","where":"Harrowgate docks","status":"confirmed","summary":"Kestrel arrives off the ferry and signs on with the crew.","beats":["Pip and Kestrel have history, and neither says what it is"],"quotes":[],"notes":"","secret":""},{"id":"e-b9-1","lane":"B","day":9,"title":"Down the Moonpool","where":"The Moonpool, beneath Harrowgate harbour","status":"confirmed","summary":"Marguerite leads the crew through a hidden pool under the harbour, into a drowned market where time runs fast.","beats":["The water closes over them and doesn’t feel wet"],"quotes":[],"notes":"","secret":""},{"id":"e-b9-2","lane":"B","day":9,"title":"The market of hours","where":"The drowned market","status":"confirmed","summary":"Stalls sell hours, days and years in stoppered bottles. Doss trades a bad memory for a map.","beats":["A vendor offers Pip “the afternoon you lost”","Kestrel buys nothing and watches everything"],"quotes":[{"who":"Market vendor","text":"Everyone down here is in a hurry. Up there, you have all the time in the world."}],"notes":"","secret":"","sub":2},{"id":"e-b9-3","lane":"B","day":9,"title":"A bargain with the Tide Queen","where":"The Tide Queen’s pavilion","status":"confirmed","summary":"The Tide Queen admits she lent the tide to someone and never got it back.","beats":["The borrower carried a lantern that gave no light","The Queen will return the harbour if they bring her the lantern"],"quotes":[],"notes":"","secret":"","sub":3},{"id":"e-b10-1","lane":"B","day":10,"title":"Back through the water","where":"The Moonpool","status":"confirmed","summary":"Three days there, a single day here. The crew surfaces with the Queen’s bargain and a map of the sea-lighthouses.","beats":[],"quotes":[],"notes":"","secret":""},{"id":"e-b14","lane":"B","day":14,"title":"Council at the Tidewater Inn","where":"Tidewater, the Tidewater Inn","status":"confirmed","summary":"The crew sails into Tidewater to meet the Lantern Company.","beats":[],"quotes":[],"notes":"","secret":""},{"id":"e-b15","lane":"B","day":15,"title":"Something at the lighthouse","where":"Tidewater lighthouse","status":"placeholder","summary":"Marguerite has seen lights in the drowned lighthouse. Details still to come.","beats":[],"quotes":[],"notes":"","secret":""},{"id":"e-c1","lane":"C","day":1,"title":"Into the Hollow Wood","where":"The Hollow Wood","status":"confirmed","summary":"Isolde and Fennick go looking for a missing woodcutter in a forest the maps leave blank.","beats":["The path behind them closes like a curtain"],"quotes":[],"notes":"","secret":""},{"id":"e-c3","lane":"C","day":3,"title":"The ring of standing stones","where":"The Hollow Wood, the Nine Maidens","status":"confirmed","summary":"A ring of stones hums when they step inside. Fennick counts ten stones where there should be nine.","beats":[],"quotes":[{"who":"Fennick","text":"I’m not saying it moved. I’m saying I’d like to leave before it does again."}],"notes":"","secret":""},{"id":"e-c5","lane":"C","day":5,"title":"The Sleeping Court","where":"The Sleeping Court","status":"confirmed","summary":"They are welcomed to a feast in a hall where time runs slowly; a single night there lasts four days outside.","beats":["The courtiers dance without ever finishing a step","The woodcutter is there, and he doesn’t want to leave","Fennick is taken by the Court at dawn"],"quotes":[{"who":"The Sleeping Queen","text":"Stay the night. There’s no hurry here."}],"notes":"","secret":""},{"id":"e-c9","lane":"C","day":9,"title":"The second night of the Court","where":"The Sleeping Court","status":"confirmed","summary":"Isolde bargains for Fennick with a song, and learns the Court’s last guest carried a lantern that gave no light.","beats":["Isolde sings until the Court falls asleep","Fennick is returned, remembering nothing"],"quotes":[],"notes":"","secret":""},{"id":"e-c13","lane":"C","day":13,"title":"Out of the Sleeping Court","where":"The edge of the Hollow Wood","status":"confirmed","summary":"The Thornwalkers walk out of the wood onto the Salt Road and into the Lantern Company.","beats":["Isolde joins the Lantern Company","Fennick stays behind to guide the woodcutter home"],"quotes":[],"notes":"","secret":""},{"id":"e-w2","lane":"W","day":2,"title":"The tide fails","where":"The whole coast","status":"confirmed","summary":"From Harrowgate to Tidewater, the sea pulls back a hundred yards and stays there.","beats":[],"quotes":[],"notes":"","secret":""},{"id":"e-w8","lane":"W","day":8,"title":"Storm season comes early","where":"The coast road","status":"confirmed","summary":"Grey storms roll in off the dry seabed, though there’s no water left to feed them.","beats":[],"quotes":[],"notes":"","secret":""},{"id":"e-w11","lane":"W","day":11,"title":"Festival of Tides","where":"Every harbour town","status":"confirmed","summary":"The coast holds its festival anyway, lighting lanterns for a tide that doesn’t come.","beats":[],"quotes":[],"notes":"","secret":""},{"id":"e-w15","lane":"W","day":15,"title":"Bells in Harrowgate","where":"Harrowgate","status":"upcoming","summary":"Rumour says the Guild will ring every bell in the city on the night the lighthouses are relit.","beats":[],"quotes":[],"notes":"","secret":""}],"crossings":[{"id":"x-letter","from":{"lane":"B","day":6},"to":{"lane":"A","day":6},"text":"Pip’s letter reaches the Lantern Company at Brinewell"},{"id":"x-kestrel","from":{"lane":"A","day":7},"to":{"lane":"B","day":7},"text":"Kestrel leaves the Lantern Company for the Gull Street Crew"},{"id":"x-wood","from":{"lane":"C","day":13},"to":{"lane":"A","day":13},"text":"The Thornwalkers walk out of the Hollow Wood and into the Lantern Company"},{"id":"x-inn","from":{"lane":"A","day":14},"to":{"lane":"B","day":14},"text":"Both companies meet at the Tidewater Inn"}],"spans":[{"id":"s-siege","lane":"A","from":8,"to":11,"label":"Stand-off at Marrow Ford","color":"#C9A227","flux":null},{"id":"s-moonpool","lane":"B","from":9,"to":10,"label":"Beneath the Moonpool","color":"#3E8FB0","flux":{"mode":"fast","n":3,"start":1}},{"id":"s-court","lane":"C","from":5,"to":12,"label":"The Sleeping Court","color":"#8A6FD0","flux":{"mode":"slow","n":4,"start":1}}],"dayNotes":{"1":"Session zero. Each party starts in a different place; their threads cross as the lighthouses go dark.","11":"The Festival of Tides falls on the same night as the fight at Marrow Ford."},"characters":[{"id":"c-wren","name":"Wren","memberships":[{"lane":"A","from":1,"to":null,"note":""}]},{"id":"c-tamsin","name":"Tamsin","memberships":[{"lane":"A","from":1,"to":null,"note":""}]},{"id":"c-borin","name":"Old Borin","memberships":[{"lane":"A","from":1,"to":11,"note":"falls holding the bridge"}]},{"id":"c-kestrel","name":"Kestrel","memberships":[{"lane":"A","from":1,"to":7,"note":""},{"lane":"B","from":7,"to":null,"note":""}]},{"id":"c-pip","name":"Pip","memberships":[{"lane":"B","from":1,"to":null,"note":""}]},{"id":"c-doss","name":"Doss","memberships":[{"lane":"B","from":1,"to":null,"note":""}]},{"id":"c-marguerite","name":"Marguerite","memberships":[{"lane":"B","from":3,"to":null,"note":""}]},{"id":"c-isolde","name":"Isolde","memberships":[{"lane":"C","from":1,"to":13,"note":""},{"lane":"A","from":13,"to":null,"note":""}]},{"id":"c-fennick","name":"Fennick","memberships":[{"lane":"C","from":1,"to":5,"note":"taken by the Sleeping Court"},{"lane":"C","from":9,"to":13,"note":"stays to guide the woodcutter home"}]}],"publishedAt":"2026-09-26T04:43:48.000Z"}]}</script>
+<script id="appjs">/* ============================================================================
+ THREADS: developer notes (kept inside the code so they travel with the page)
+ A timeline notebook for tabletop campaigns: lanes (parties, characters, world
+ events) across numbered steps (Day/Session/Week), with events, spans,
+ connections, day notes, characters with stints, follow, import/export, publish.
+
+ STRUCTURE. One self-contained HTML file with exactly three moving parts:
+   <style id="css">                        styles
+   <script type="application/json" id="seed">  timelines baked in at publish
+   <script id="appjs">                      this code (renders the whole UI)
+ The page REPUBLISHES ITSELF (buildDoc) from HEAD + those three parts, so:
+ keep all markup generated by JS, add nothing outside them, and never write a
+ literal closing script tag inside this code (use "<\/script>").
+
+ CAPABILITIES: artifact (owner's "Publish to this page"), downloads (Export),
+ user (canEdit() hides Publish from non-editors). Deliberately NOT db: it makes
+ the page organisation-internal, and players outside the org must open it.
+
+ STORAGE. localStorage "threads-workspace-v1" holds the workspace
+ {format:"threads-workspace",version:1,current,timelines:[...]}. sessionStorage
+ "threads-view" remembers the last day viewed; "threads-open" (localStorage)
+ whether the day summary shows every event's details or just its headline. All storage is try/catch guarded.
+
+ PUBLISH / UPDATE FLOW. Seed timelines carry publishedAt; local copies carry
+ basedOn. If a seed's publishedAt is newer than the local basedOn, a notice
+ offers: load (replace), load as a separate copy, or keep mine. Private notes
+ (event.secret) are always stripped on publish, and on export unless ticked.
+ >> When changing CODE ONLY, leave the seed script exactly as it is (same
+ >> publishedAt), or every visitor gets an "updated version" notice.
+
+ FILE FORMAT "threads-timeline" v1:
+   {id,title,subtitle,dayLabel,dayCount,updated,publishedAt?,basedOn?,
+    lanes:[{id,name,color,now,roster}],   roster false = no "Who's where" list
+    events:[{id,lane,day,sub?,title,where,status,summary,beats[],quotes[{who,text}],notes,secret}],
+      status: confirmed | partial | placeholder | upcoming
+    crossings:[{id,from:{lane,day},to:{lane,day},text}],
+    spans:[{id,lane,from,to,label,color,flux}],
+      flux: null | {mode:"fast"|"slow", n, start}  fast: n days there per day
+      here (n<=12); slow: one day there per n days here; start: first local day
+    dayNotes:{ "<day>": text },
+    characters:[{id,name,memberships:[{lane,from,to|null,note}]}],
+    origin?}   origin = id of the timeline this one was copied from
+ normalize() validates every import and migrates older files (lane.cast lists
+ become characters). Workspace files ("threads-workspace") hold several.
+
+ GROUP WORKFLOW (MERGE). Players edit their own copy and Export it; the keeper
+ Imports it. importText() sends any timeline that findMine() recognises (same
+ id, or linked by origin) to openReview(), which lists diffTimelines(mine,
+ theirs): new and changed lanes' "now", events, connections, spans, day notes
+ and characters, each with a tick box. Merges only add or update, never
+ delete; theirs' private notes are ignored; items that need a new lane pull it
+ in; one snap() makes the whole merge undoable. "How this works" (openHelp)
+ explains the loop to players. Export can also save a blank copy of the app
+ (buildDoc with no timelines) as threads.html for other groups.
+
+ RULES & CONVENTIONS. One event per lane per day (details go in beats), except
+ inside a fast-flux span, where each day has n spots (event.sub 2..n; absent
+ means spot 1). Nothing may leave an event with a sub beyond its day's spots:
+ span edits that would are refused (subsBroken), normalize() drops stray subs.
+ DAY SUMMARY. In view mode each event is a <details class="fold">: the
+ summary line is lane, title, place, local time and summary; beats, quotes,
+ notes and private notes open below. Open state is per event for the session
+ (openEv), with "Show/Hide all details" (allOpen) as the default; an event
+ whose hidden part matches Follow opens itself and says so. Events with
+ nothing more to show stay plain articles. The editor preview is never folded.
+ SELECTING. Clicking a day column (.colhit, either mode) selects the day.
+ In edit mode an empty lane cell only selects: pickSpot() sets pend
+ {lane,day,sub}, draws a dashed marker, and highlights that lane's block in
+ the day panel, whose "Add an event here" creates it. Nothing is created by a
+ single click on the timeline. Clicking an event in edit mode selects its day
+ and highlights it (hiEv, pickEvent); double-click or its Edit button opens
+ the editor. Day numbers, spans, bars and labels don't take clicks.
+ SLOW SPANS. In a slow span each day there is one spot covering n days here
+ (blockOf). Its event always sits on the block's first day: touch() and
+ normalize() snap events there (snapSlow), laneDay() maps any day in a block
+ to its start for eventsAt/evAtSub/createEvent and the editor. Span edits
+ that would put two events in one block ask first: trySpanChange() lists the
+ clashes and, if agreed, combineClashes() folds each group into its first
+ event (others become beats, quotes and notes kept). Faster-spot breakage (fastBroken) is still refused. Nodes sit
+ mid-block over a bar showing its length.
+ LAYOUT. layout() sets per-day column widths (fast spans widen days to n*30px
+ on visible lanes); always position with X(d), CL(d), CW(d) and subX(), never
+ PADX+(d-1)*COLW. Uniform timelines keep the original coordinates.
+ WHO'S WHERE. membersOn() reads character stints. A stint whose "to" is the
+ day is a departure (rosterOn splits staying/departing); its note says why,
+ else departureOf() names the lane they go to. A stint starting that day is
+ an arrival only if they weren't with that lane the day before and the lane
+ isn't just starting (arrivalOf: "joins", or "rejoins" if they were with it
+ earlier, plus "from X" for a lane left that day or the day before). Moves
+ are same-day: moveChar() ends the stint ON the day and starts the new one
+ that day, so both lanes list them; moving back to a lane left that same day
+ undoes the move. staysAfterAll() cancels a departure and any move it began.
+ joinChar() adds someone from a chosen day (for "been there all along"),
+ refusing overlaps with another lane. The edit-mode panel
+ (rosterEditor/bindRoster) shows people as chips; openPerson() holds the
+ actions (edit this stint's dates, move, depart with a reason, stays after
+ all, not with them, all stints).
+ tidyStints() joins touching or overlapping stints on one lane.
+ All user text is escaped through esc()/hl() before it reaches innerHTML.
+ Undo is a snapshot stack: call snap() before the first change of an edit.
+ Day insert/remove shift events, spans, crossings, dayNotes, stints and lane
+ "now" together (shiftFrom / removeDay). Per-lane insert/remove (laneInsert /
+ laneRemove, via shiftLane) moves only that lane's events, spans, stints, "now"
+ and connection ends; day notes are shared and stay put.
+ SETTINGS are tabbed (Timeline, Lanes, Spans, Characters); every tab panel is
+ always in the DOM, hidden when inactive; box.dataset.tab remembers the tab.
+
+ DESIGN. Stitched threads: dashed lanes, knots for connections, hatched spans.
+ Alegreya + Alegreya Sans. Cool linen ground, woad-blue dark mode, colour
+ tokens on :root. Sentence case, no all-caps labels, no middle-dot separators.
+
+ TESTING. Headless jsdom suites in threads_dev_kit.zip: test.js, test2.js,
+ test3.js (60 checks, written against the kit's own threads.html fixture seed)
+ test4.js (25 checks on merging, help and the blank app copy) and test5.js
+ (55 checks on who's where editing and time flux) and test6.js (26 checks
+ on settings tabs, span cards and per-lane day insert/remove) and test7.js
+ (24 checks on joins/rejoins, same-day moves, stays after all, adding people
+ and selecting in edit mode) and test8.js (13 checks on the folding day
+ summary); test4 to test8 work with any seed. 203 in all. Run them after every change before republishing.
+============================================================================ */
+(function(){
+"use strict";
+var LS_KEY="threads-workspace-v1";
+var HEAD='<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<title>Threads</title>\n<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,600;1,400&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">\n';
+var STATUS={confirmed:{label:"Confirmed"},partial:{label:"Partly known",note:"Partly known: pieced together from later references."},placeholder:{label:"Placeholder",note:"A placeholder. Details still to come."},upcoming:{label:"Upcoming",note:"Hasn’t happened yet."}};
+var PALETTE=["#C0566E","#4F7DB8","#3A9A89","#C08A2E","#8A6FD0","#6B7A3A","#B55A2E","#5C6B7F"];
+var COLW=46,PADX=26,TOP=40,LANEH=70;
+
+function $(s,r){return (r||document).querySelector(s);}
+function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function uid(p){return (p||"e")+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function now(){return new Date().toISOString();}
+function slug(s){return (String(s||"timeline").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"timeline").slice(0,60);}
+function hex(c,i){return /^#[0-9a-f]{6}$/i.test(c||"")?c:PALETTE[(i||0)%PALETTE.length];}
+function num(v,d){v=parseInt(v,10);return isFinite(v)?v:d;}
+function str(v,max){return String(v==null?"":v).slice(0,max||4000);}
+
+/* ---------- model ---------- */
+function blankTimeline(title){
+  return {format:"threads-timeline",version:1,id:uid("tl"),title:title||"Untitled campaign",subtitle:"",dayLabel:"Day",dayCount:10,updated:now(),
+    lanes:[{id:uid("l"),name:"Party",color:PALETTE[0],now:null,roster:true},{id:uid("l"),name:"World events",color:PALETTE[3],now:null,roster:false}],
+    events:[],crossings:[],spans:[],dayNotes:{},characters:[]};
+}
+function normalize(raw){
+  var t=blankTimeline();
+  raw=raw||{};
+  t.id=str(raw.id,80)||t.id; t.title=str(raw.title,200)||"Untitled campaign"; t.subtitle=str(raw.subtitle,600);
+  t.dayLabel=str(raw.dayLabel,30)||"Day"; t.updated=str(raw.updated,40)||now();
+  if(raw.publishedAt) t.publishedAt=str(raw.publishedAt,40);
+  if(raw.basedOn) t.basedOn=str(raw.basedOn,40);
+  if(raw.origin) t.origin=str(raw.origin,80);
+  var lanes=Array.isArray(raw.lanes)?raw.lanes:[];
+  t.lanes=lanes.slice(0,40).map(function(l,i){return {id:str(l.id,60)||uid("l"),name:str(l.name,80)||("Lane "+(i+1)),color:hex(l.color,i),now:(l.now==null||l.now==="")?null:num(l.now,null),roster:l.roster!==false};});
+  if(!t.lanes.length) t.lanes=blankTimeline().lanes;
+  var ids={}; t.lanes.forEach(function(l){ids[l.id]=1;});
+  var seen={};
+  t.events=(Array.isArray(raw.events)?raw.events:[]).slice(0,5000).filter(function(e){return e&&ids[e.lane]&&num(e.day,0)>0;}).map(function(e){
+    return {id:str(e.id,60)||uid("e"),lane:e.lane,day:num(e.day,1),title:str(e.title,200)||"Untitled",where:str(e.where,200),
+      status:STATUS[e.status]?e.status:"confirmed",summary:str(e.summary,6000),
+      beats:(Array.isArray(e.beats)?e.beats:[]).map(function(b){return str(b,600).trim();}).filter(Boolean).slice(0,80),
+      quotes:(Array.isArray(e.quotes)?e.quotes:[]).map(function(q){return {who:str(q&&q.who,120),text:str(q&&q.text,1200)};}).filter(function(q){return q.text;}).slice(0,30),
+      notes:str(e.notes,2000),secret:str(e.secret,6000),sub:num(e.sub,0)>1?Math.min(99,num(e.sub,0)):undefined};
+  });
+  t.crossings=(Array.isArray(raw.crossings)?raw.crossings:[]).slice(0,500).filter(function(c){return c&&c.from&&c.to&&ids[c.from.lane]&&ids[c.to.lane];}).map(function(c){
+    return {id:str(c.id,60)||uid("x"),from:{lane:c.from.lane,day:num(c.from.day,1)},to:{lane:c.to.lane,day:num(c.to.day,1)},text:str(c.text,600)};});
+  t.spans=(Array.isArray(raw.spans)?raw.spans:[]).slice(0,200).filter(function(s){return s&&ids[s.lane];}).map(function(s,i){
+    var a=num(s.from,1),b=num(s.to,a); return {id:str(s.id,60)||uid("s"),lane:s.lane,from:Math.min(a,b),to:Math.max(a,b),label:str(s.label,80),color:hex(s.color,4+i),flux:parseFlux(s.flux)};});
+  t.events.forEach(function(e){ if(!e.sub||e.sub>fastSlots(t,e.lane,e.day)) delete e.sub; var b=blockOf(t,e.lane,e.day); if(b) e.day=b.start; });
+  t.events=t.events.filter(function(e){var k=e.lane+"|"+e.day+"|"+(e.sub||1); if(seen[k]) return false; seen[k]=1; return true;});
+  t.dayNotes={}; if(raw.dayNotes&&typeof raw.dayNotes==="object") Object.keys(raw.dayNotes).slice(0,2000).forEach(function(k){var v=str(raw.dayNotes[k],4000); if(v&&num(k,0)>0) t.dayNotes[num(k,1)]=v;});
+  var chars=Array.isArray(raw.characters)?raw.characters:null;
+  if(!chars){ chars=[]; lanes.forEach(function(l,i){ var lid=t.lanes[i]&&t.lanes[i].id, first=null;
+      t.events.forEach(function(e){ if(e.lane===lid&&(first==null||e.day<first)) first=e.day; });
+      (Array.isArray(l.cast)?l.cast:[]).forEach(function(n){ n=str(n,80).trim(); if(n&&lid) chars.push({name:n,memberships:[{lane:lid,from:first||1,to:null}]}); }); }); }
+  t.characters=chars.slice(0,500).map(function(c){ return {id:str(c&&c.id,60)||uid("c"),name:str(c&&c.name,80).trim(),
+      memberships:(Array.isArray(c&&c.memberships)?c.memberships:[]).filter(function(m){return m&&ids[m.lane];}).slice(0,40).map(function(m){
+        var a=Math.max(1,num(m.from,1)), b=(m.to==null||m.to==="")?null:Math.max(a,num(m.to,a)); return {lane:m.lane,from:a,to:b,note:str(m.note,120)};})};
+    }).filter(function(c){return c.name;});
+  var maxDay=1; t.events.forEach(function(e){maxDay=Math.max(maxDay,e.day);}); t.spans.forEach(function(s){maxDay=Math.max(maxDay,s.to);});
+  t.characters.forEach(function(c){c.memberships.forEach(function(m){maxDay=Math.max(maxDay,m.to||m.from);});});
+  t.dayCount=Math.min(2000,Math.max(num(raw.dayCount,10),maxDay,1));
+  return t;
+}
+function parseFlux(f){ if(!f||typeof f!=="object"||(f.mode!=="fast"&&f.mode!=="slow")) return null;
+  return {mode:f.mode,n:Math.min(f.mode==="fast"?12:999,Math.max(2,num(f.n,2))),start:Math.max(1,num(f.start,1))}; }
+function slowSpan(t,lane,d){for(var i=0;i<t.spans.length;i++){var s=t.spans[i]; if(s.flux&&s.flux.mode==="slow"&&s.lane===lane&&s.from<=d&&d<=s.to) return s;} return null;}
+function blockOf(t,lane,d){var s=slowSpan(t,lane,d); if(!s) return null; var st=s.from+Math.floor((d-s.from)/s.flux.n)*s.flux.n; return {start:st,end:Math.min(s.to,st+s.flux.n-1),span:s};}
+/* move events inside slow spans to the first day of their day there; returns [moved, clashes] */
+function snapSlow(t){var moved=0, clash=0; t.events.forEach(function(e){var b=blockOf(t,e.lane,e.day); if(!b||e.day===b.start) return;
+  if(t.events.some(function(o){return o!==e&&o.lane===e.lane&&o.day>=b.start&&o.day<=b.end&&(o.day===b.start||t.events.indexOf(o)<t.events.indexOf(e));})){clash++; return;} e.day=b.start; moved++;}); return [moved,clash];}
+function fastSlots(t,lane,d){var n=1; t.spans.forEach(function(s){if(s.flux&&s.flux.mode==="fast"&&s.lane===lane&&s.from<=d&&d<=s.to) n=Math.max(n,s.flux.n);}); return n;}
+function stripSecrets(t){var c=clone(t); c.events.forEach(function(e){e.secret="";}); return c;}
+
+/* ---------- load ---------- */
+var seed; try{seed=JSON.parse($("#seed").textContent);}catch(e){seed={timelines:[]};}
+var seedTls=(seed&&Array.isArray(seed.timelines)?seed.timelines:[]).map(normalize);
+var WS=null, notices=[];
+try{var raw=localStorage.getItem(LS_KEY); if(raw){var o=JSON.parse(raw); if(o&&Array.isArray(o.timelines)&&o.timelines.length) WS={current:o.current,timelines:o.timelines.map(normalize)};}}catch(e){}
+if(!WS){
+  WS={current:(seed&&seed.current)||"",timelines:seedTls.map(function(t){var c=clone(t); c.basedOn=t.publishedAt||""; return c;})};
+  if(!WS.timelines.length) WS.timelines=[blankTimeline()];
+}else{
+  seedTls.forEach(function(s){
+    var mine=WS.timelines.filter(function(t){return t.id===s.id;})[0];
+    if(!mine){var c=clone(s); c.basedOn=s.publishedAt||""; WS.timelines.push(c); notices.push({kind:"added",id:s.id,title:s.title});}
+    else if(s.publishedAt&&s.publishedAt>(mine.basedOn||"")) notices.push({kind:"newer",id:s.id,title:s.title,at:s.publishedAt});
+  });
+}
+if(!WS.timelines.some(function(t){return t.id===WS.current;})) WS.current=WS.timelines[0].id;
+function cur(){return WS.timelines.filter(function(t){return t.id===WS.current;})[0]||WS.timelines[0];}
+var T=cur();
+
+/* ---------- view state ---------- */
+var mode="view", sel=1, selEv=null, pend=null, hiEv=null, follow="", hidden={}, undoStack=[], statusText="", ART=null, DL=null, USER=null, canPublish=true;
+function pickStartDay(){
+  var d=null; try{var s=JSON.parse(sessionStorage.getItem("threads-view")||"null"); if(s&&s.tl===T.id) d=s.day;}catch(e){}
+  if(!d){var ev=T.events.slice().sort(function(a,b){return a.day-b.day;}); d=ev.length?ev[0].day:1;}
+  sel=Math.min(Math.max(1,d),T.dayCount);
+}
+pickStartDay();
+function rememberView(){try{sessionStorage.setItem("threads-view",JSON.stringify({tl:T.id,day:sel}));}catch(e){}}
+
+/* ---------- saving + undo ---------- */
+var saveTimer=null;
+function setStatus(s){statusText=s; var el=$("#status"); if(el) el.textContent=s;}
+function saveNow(){clearTimeout(saveTimer); saveTimer=null;
+  try{localStorage.setItem(LS_KEY,JSON.stringify({format:"threads-workspace",version:1,current:WS.current,timelines:WS.timelines})); if(statusText==="Saving…"||!statusText) setStatus("Saved in this browser");}
+  catch(e){setStatus("Couldn’t save in this browser. Export a file to keep your changes.");}}
+function touch(){snapSlow(T); T.updated=now(); clearTimeout(saveTimer); setStatus("Saving…"); saveTimer=setTimeout(saveNow,450);}
+window.addEventListener("pagehide",function(){if(saveTimer) saveNow();});
+function snap(){undoStack.push(JSON.stringify(T)); if(undoStack.length>50) undoStack.shift(); var b=$("#undoBtn"); if(b) b.disabled=false;}
+function undo(){var s=undoStack.pop(); if(!s) return; var o=JSON.parse(s); var i=WS.timelines.map(function(t){return t.id;}).indexOf(o.id);
+  if(i>=0) WS.timelines[i]=o; else WS.timelines.push(o); WS.current=o.id; T=o; if(selEv&&!evById(selEv)) selEv=null; sel=Math.min(sel,T.dayCount); touch(); renderAll();}
+
+/* ---------- lookups ---------- */
+function laneById(id){return T.lanes.filter(function(l){return l.id===id;})[0];}
+function evById(id){return T.events.filter(function(e){return e.id===id;})[0];}
+function evAt(lane,day){return T.events.filter(function(e){return e.lane===lane&&e.day===day;})[0];}
+function eventsAt(lane,day){day=laneDay(lane,day); return T.events.filter(function(e){return e.lane===lane&&e.day===day;}).sort(function(a,b){return (a.sub||1)-(b.sub||1);});}
+function evAtSub(lane,day,sub){day=laneDay(lane,day); return T.events.filter(function(e){return e.lane===lane&&e.day===day&&(e.sub||1)===sub;})[0];}
+function slotsAt(lane,d){return fastSlots(T,lane,d);}
+function firstFree(lane,d,except){var n=slotsAt(lane,d); for(var k=1;k<=n;k++){var o=evAtSub(lane,d,k); if(!o||o===except) return k;} return null;}
+function subsBroken(){ if(T.events.some(function(e){return e.sub&&e.sub>slotsAt(e.lane,e.day);})) return true;
+  var seen={}; return T.events.some(function(e){var b=blockOf(T,e.lane,e.day); if(!b) return false; var k=e.lane+"|"+b.start; if(seen[k]) return true; seen[k]=1; return false;}); }
+function fastBroken(){return T.events.some(function(e){return e.sub&&e.sub>slotsAt(e.lane,e.day);});}
+function slowClashes(){var g={}, out=[]; T.events.forEach(function(e){var b=blockOf(T,e.lane,e.day); if(!b) return; var k=e.lane+"|"+b.start; (g[k]=g[k]||{lane:e.lane,block:b,evs:[]}).evs.push(e);});
+  Object.keys(g).forEach(function(k){ if(g[k].evs.length>1){ g[k].evs.sort(function(a,b){return a.day-b.day||(a.sub||1)-(b.sub||1);}); out.push(g[k]); } }); return out;}
+function combineClashes(groups){var gone=0; groups.forEach(function(gr){ var keep=gr.evs[0];
+    gr.evs.slice(1).forEach(function(o){ keep.beats.push(dayWord()+" "+o.day+" here: "+o.title+(o.summary?". "+o.summary:""));
+      o.beats.forEach(function(b){keep.beats.push(b);}); keep.quotes=keep.quotes.concat(o.quotes);
+      if(!keep.where&&o.where) keep.where=o.where; if(o.notes) keep.notes=(keep.notes?keep.notes+"\n":"")+o.notes; if(o.secret) keep.secret=(keep.secret?keep.secret+"\n":"")+o.secret;
+      if(selEv===o.id) selEv=keep.id; T.events.splice(T.events.indexOf(o),1); gone++; });
+    keep.day=gr.block.start; }); return gone;}
+function clashText(groups){var dwl=dayWordL(), ex=groups.slice(0,3).map(function(gr){return dwl+"s "+gr.evs.map(function(e){return e.day;}).join(" and ")+" ("+gr.evs.map(function(e){return "“"+e.title+"”";}).join(", ")+")";});
+  return ex.join("; ")+(groups.length>3?"; and "+(groups.length-3)+" more":"");}
+/* change a span; if slower time would put several events in one day there, ask to combine them */
+function trySpanChange(s,mutate,done){
+  var before=clone(s); snap(); mutate(s); if(s.from>s.to){var a=s.from; s.from=s.to; s.to=a;}
+  var undo=function(){Object.keys(before).forEach(function(k){s[k]=before[k];}); undoStack.pop();};
+  if(fastBroken()){ undo(); setStatus("That would leave an event without a spot in a faster "+dayWordL()+". Move or delete it first."); renderAll(); return; }
+  var g=slowClashes();
+  var finish=function(msg){ var mv=snapSlow(T)[0]; touch(); renderAll(); if(msg||mv) setStatus(msg||(mv+" event"+(mv>1?"s":"")+" moved to the first "+dayWordL()+" here of "+(mv>1?"their":"its")+" "+dayWordL()+" there")); if(done) done(); };
+  if(!g.length) return finish();
+  var after=clone(s), ln=laneById(s.lane), dwl=dayWordL(); undo(); renderAll();
+  confirmDlg("Combine events into one "+dwl+" there?","With one "+dwl+" there for every "+after.flux.n+" "+dwl+"s here, some "+dwl+"s there would hold more than one of "+(ln?ln.name:"this lane")+"’s events: "+clashText(g)+". Combine each group into its first event? The others become beats in it, with their quotes and notes kept. You can undo this.","Combine them").then(function(ok){
+    if(!ok){ setStatus("Nothing changed"); return; }
+    snap(); Object.keys(after).forEach(function(k){s[k]=after[k];}); var gs=slowClashes(), n=combineClashes(gs);
+    finish("Combined events in "+gs.length+" "+dwl+(gs.length>1?"s":"")+" there, folding "+n+" into "+(gs.length>1?"others":"another")+". Undo if that’s not what you wanted."); });
+}
+function laneDay(lane,d){var b=blockOf(T,lane,d); return b?b.start:d;}
+function fluxAt(lane,d){for(var i=0;i<T.spans.length;i++){var s=T.spans[i]; if(s.flux&&s.lane===lane&&s.from<=d&&d<=s.to) return s;} return null;}
+function localDay(s,d,sub){return s.flux.mode==="fast"?s.flux.start+(d-s.from)*s.flux.n+((sub||1)-1):s.flux.start+Math.floor((d-s.from)/s.flux.n);}
+function localText(e){var s=fluxAt(e.lane,e.day); if(!s) return ""; var dwl=dayWordL(), ld=localDay(s,e.day,e.sub), t=dwl+" "+ld+" there";
+  if(s.flux.mode==="slow"){var a=s.from+(ld-s.flux.start)*s.flux.n, b=Math.min(s.to,a+s.flux.n-1); if(b>a) t+=", which lasts "+dwl+"s "+a+" to "+b+" here";}
+  return s.label?s.label+": "+t:t.charAt(0).toUpperCase()+t.slice(1);}
+function spanPreview(s){ var l=laneById(s.lane), dwl=dayWordL(), len=s.to-s.from+1, here=(len>1?dwl+"s "+s.from+" to "+s.to:dwl+" "+s.from);
+  var t=(l?l.name:"This lane")+", "+here+".";
+  if(!s.flux) return t;
+  var f=s.flux, cnt=f.mode==="fast"?len*f.n:Math.ceil(len/f.n), last=f.start+cnt-1;
+  t+=" "+here.charAt(0).toUpperCase()+here.slice(1)+" here "+(len>1?"are":"is")+" "+(cnt>1?dwl+"s "+f.start+" to "+last:dwl+" "+f.start)+" there.";
+  if(f.mode==="slow"&&len%f.n) t+=" "+dwl.charAt(0).toUpperCase()+dwl.slice(1)+" "+last+" there is cut short by the end of the span.";
+  return t; }
+function fluxWords(s){if(!s.flux) return ""; var dwl=dayWordL(); return s.flux.mode==="fast"?(s.flux.n+" "+dwl+"s there for each "+dwl+" here"):("one "+dwl+" there for every "+s.flux.n+" "+dwl+"s here");}
+function visLanes(){return T.lanes.filter(function(l){return !hidden[l.id];});}
+function laneIndex(id){var v=visLanes(); for(var i=0;i<v.length;i++) if(v[i].id===id) return i; return -1;}
+var SLOTW=30, LAY=null;
+function layout(){var n=T.dayCount+2, mx=[], v={}; visLanes().forEach(function(l){v[l.id]=1;});
+  T.spans.forEach(function(s){ if(s.flux&&s.flux.mode==="fast"&&v[s.lane]) for(var d=s.from;d<=Math.min(s.to,n);d++) mx[d]=Math.max(mx[d]||1,s.flux.n); });
+  var L=[0], w=[0], x=PADX-COLW/2; for(var d=1;d<=n;d++){var ww=mx[d]>1?Math.max(COLW,mx[d]*SLOTW):COLW; L[d]=x; w[d]=ww; x+=ww;} LAY={L:L,w:w,n:n};}
+function X(d){ if(!LAY||d<1||d>LAY.n) return PADX+(d-1)*COLW; return LAY.L[d]+LAY.w[d]/2; }
+function CW(d){return (LAY&&d>=1&&d<=LAY.n)?LAY.w[d]:COLW;}
+function CL(d){return X(d)-CW(d)/2;}
+function subX(lane,d,sub){var b=blockOf(T,lane,d); if(b) return (CL(b.start)+CL(b.end)+CW(b.end))/2; var n=slotsAt(lane,d); if(n<=1) return X(d); return CL(d)+(Math.min(sub||1,n)-0.5)*CW(d)/n;}
+function Y(i){return TOP+30+i*LANEH;}
+function eventText(e){return [e.title,e.where,e.summary].concat(e.beats,e.quotes.map(function(q){return q.who+" "+q.text;}),[e.notes]).join(" ");}
+function reEsc(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
+function followRx(){return follow?new RegExp("(\\b"+reEsc(esc(follow))+"(?:’s|'s)?\\b)","gi"):null;}
+function matches(e){if(!follow) return true; return new RegExp("\\b"+reEsc(follow)+"\\b","i").test(eventText(e));}
+function hl(s){var h=esc(s); var r=followRx(); return r?h.replace(r,"<mark>$1</mark>"):h;}
+function dayWord(){return T.dayLabel||"Day";}
+function dayWordL(){return dayWord().toLowerCase();}
+function lastEventDay(lid){var m=0; T.events.forEach(function(e){if(e.lane===lid&&e.day>m) m=e.day;}); return m;}
+function memberEnd(m){ if(m.to!=null) return Math.min(m.to,T.dayCount); var l=laneById(m.lane), e=(l&&l.now!=null&&l.now>=m.from)?l.now:(lastEventDay(m.lane)||T.dayCount); return Math.min(T.dayCount,Math.max(m.from,e)); }
+function membersOn(lid,day){var out=[]; (T.characters||[]).forEach(function(c){c.memberships.forEach(function(m){if(m.lane===lid&&m.from<=day&&day<=memberEnd(m)) out.push({c:c,m:m});});}); return out.sort(function(a,b){return a.c.name.localeCompare(b.c.name);});}
+function followChar(){if(!follow) return null; var f=follow.toLowerCase(); return (T.characters||[]).filter(function(c){return c.name.toLowerCase()===f;})[0]||null;}
+function presentIn(c,lid,day){return c&&c.memberships.some(function(m){return m.lane===lid&&m.from<=day&&day<=memberEnd(m);});}
+function nodeLit(e){ if(!follow) return true; if(matches(e)) return true; var c=followChar(); return !!(c&&presentIn(c,e.lane,e.day)); }
+function mentionDays(){var s={}; T.events.forEach(function(e){if(!hidden[e.lane]&&matches(e)) s[e.day]=1;}); Object.keys(T.dayNotes).forEach(function(d){if(follow&&new RegExp("\\b"+reEsc(follow)+"\\b","i").test(T.dayNotes[d])) s[d]=1;}); return Object.keys(s).map(Number).sort(function(a,b){return a-b;});}
+function stintText(m){var l=laneById(m.lane), n=l?l.name:"?", dw=dayWordL();
+  var r=m.to==null?(n+" from "+dw+" "+m.from):(m.from===m.to?(n+" on "+dw+" "+m.from):(n+", "+dw+"s "+m.from+" to "+m.to)); return r+(m.note?" ("+m.note+")":"");}
+/* day operations */
+function shiftFrom(d,delta){
+  T.events.forEach(function(e){if(e.day>=d) e.day+=delta;});
+  T.spans.forEach(function(s){if(s.from>=d) s.from+=delta; if(s.to>=d) s.to+=delta;});
+  T.crossings.forEach(function(c){if(c.from.day>=d) c.from.day+=delta; if(c.to.day>=d) c.to.day+=delta;});
+  var dn={}; Object.keys(T.dayNotes).forEach(function(k){var n=+k; dn[n>=d?n+delta:n]=T.dayNotes[k];}); T.dayNotes=dn;
+  T.characters.forEach(function(c){c.memberships.forEach(function(m){if(m.from>=d) m.from+=delta; if(m.to!=null&&m.to>=d) m.to+=delta;});});
+  T.lanes.forEach(function(l){if(l.now!=null&&l.now>=d) l.now+=delta;});
+  T.dayCount+=delta;
+}
+function shiftLane(lid,d,delta){
+  var mv=function(v){return delta>0?(v>=d?v+1:v):(v>d?v-1:v);};
+  T.events.forEach(function(e){if(e.lane===lid) e.day=mv(e.day);});
+  T.crossings.forEach(function(c){if(c.from.lane===lid) c.from.day=mv(c.from.day); if(c.to.lane===lid) c.to.day=mv(c.to.day);});
+  T.spans.forEach(function(s){ if(s.lane!==lid) return; if(delta>0){ if(s.from>=d) s.from++; if(s.to>=d) s.to++; } else { if(s.to>=d) s.to--; if(s.from>d) s.from--; } });
+  T.spans=T.spans.filter(function(s){return s.to>=s.from;});
+  T.characters.forEach(function(c){ c.memberships.forEach(function(m){ if(m.lane!==lid) return; if(delta>0){ if(m.from>=d) m.from++; if(m.to!=null&&m.to>=d) m.to++; } else { if(m.to!=null&&m.to>=d) m.to--; if(m.from>d) m.from--; } });
+    c.memberships=c.memberships.filter(function(m){return m.to==null||m.to>=m.from;}); });
+  var l=laneById(lid); if(l&&l.now!=null){ if(delta>0){ if(l.now>=d) l.now++; } else { if(l.now>d) l.now--; else if(l.now===d) l.now=d>1?d-1:null; } }
+}
+function laneInsert(lid,d){ snap(); shiftLane(lid,d,1); fitDayCount(T); selEv=null; pend=null; touch(); renderAll();
+  setStatus("Inserted an empty "+dayWordL()+" "+d+" on "+laneById(lid).name+". Its later "+dayWordL()+"s moved along one; other lanes stayed put."); }
+function laneRemove(lid,d){ var l=laneById(lid), dwl=dayWordL(), evs=T.events.filter(function(e){return e.lane===lid&&e.day===d;}),
+    xs=T.crossings.filter(function(c){return (c.from.lane===lid&&c.from.day===d)||(c.to.lane===lid&&c.to.day===d);});
+  var go=function(){ snap(); T.events=T.events.filter(function(e){return evs.indexOf(e)<0;}); T.crossings=T.crossings.filter(function(c){return xs.indexOf(c)<0;}); shiftLane(lid,d,-1);
+    if(fastBroken()||slowClashes().length){ var s0=undoStack.pop(); T=JSON.parse(s0); WS.timelines[WS.timelines.map(function(t){return t.id;}).indexOf(T.id)]=T; setStatus("That would squeeze two events into one spot. Move one first."); renderAll(); return; }
+    selEv=null; pend=null; touch(); renderAll(); setStatus("Removed "+dwl+" "+d+" from "+l.name+". Its later "+dwl+"s moved back one; other lanes stayed put."); };
+  if(!evs.length&&!xs.length) return go();
+  var what=[]; if(evs.length) what.push(evs.length===1?"“"+evs[0].title+"”":evs.length+" events"); if(xs.length) what.push(xs.length+" connection"+(xs.length>1?"s":""));
+  confirmDlg("Remove "+dwl+" "+d+" from "+l.name+"?",what.join(" and ")+" on that "+dwl+" will be deleted. "+l.name+"’s later "+dwl+"s move back by one, and other lanes stay put. You can undo this.","Remove").then(function(ok){if(ok) go();}); }
+function addDays(n){snap(); T.dayCount=Math.min(2000,T.dayCount+n); sel=T.dayCount; selEv=null; touch(); renderAll(); scrollToSel(true);}
+function insertDay(d){snap(); shiftFrom(d,1); sel=d; selEv=null; touch(); renderAll(); setStatus("Inserted a new "+dayWordL()+" "+d+"; everything after moved along one");}
+function removeDay(d){
+  if(T.dayCount<=1){setStatus("A timeline needs at least one "+dayWordL()); return;}
+  var n=T.events.filter(function(e){return e.day===d;}).length;
+  confirmDlg("Remove "+dayWordL()+" "+d+"?",(n?"Its "+n+" event"+(n>1?"s":"")+" will be deleted. ":"")+"Everything after it moves back by one. You can undo this.","Remove").then(function(ok){ if(!ok) return; snap();
+    function dec(v){return v>d?v-1:v;}
+    T.events=T.events.filter(function(e){return e.day!==d;}); T.events.forEach(function(e){e.day=dec(e.day);});
+    T.crossings=T.crossings.filter(function(c){return c.from.day!==d&&c.to.day!==d;}); T.crossings.forEach(function(c){c.from.day=dec(c.from.day); c.to.day=dec(c.to.day);});
+    var dn={}; Object.keys(T.dayNotes).forEach(function(k){var v=+k; if(v!==d) dn[dec(v)]=T.dayNotes[k];}); T.dayNotes=dn;
+    T.spans.forEach(function(s){if(s.to>=d) s.to-=1; if(s.from>d) s.from-=1;}); T.spans=T.spans.filter(function(s){return s.to>=s.from;});
+    T.characters.forEach(function(c){c.memberships.forEach(function(m){if(m.to!=null&&m.to>=d) m.to-=1; if(m.from>d) m.from-=1;}); c.memberships=c.memberships.filter(function(m){return m.to==null||m.to>=m.from;});});
+    T.lanes.forEach(function(l){if(l.now!=null){ if(l.now>d) l.now-=1; else if(l.now===d) l.now=d>1?d-1:null; }});
+    T.dayCount-=1; sel=Math.min(d,T.dayCount); selEv=null; touch(); renderAll();});
+}
+
+/* ---------- skeleton ---------- */
+var root=document.createElement("div"); root.className="wrap"; document.body.insertBefore(root,document.body.firstChild);
+root.innerHTML='<header id="hdr"></header><div class="bar" id="bar"></div><div id="notices"></div><div id="settingsBox"></div>'+
+ '<div class="follow" id="followBox"></div><div class="board"><div class="lanes" id="laneLabels" aria-hidden="true"></div>'+
+ '<div class="scroll" id="scroll" tabindex="0" aria-label="Timeline. Use the left and right arrow keys to move between days."><svg class="tl" id="tl" role="group"></svg></div></div>'+
+ '<div id="dayOps"></div><div class="legend" id="legend" aria-hidden="true"></div><section class="detail" id="panel" aria-live="polite"></section>'+
+ '<p class="foot">Your changes save in this browser automatically. Export a file to back them up, move them to another device, or share them. Private notes stay in your copy unless you choose to include them.</p>'+
+ '<dialog id="dlg"></dialog>';
+var svg=$("#tl"), scroller=$("#scroll"), NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,parent){var n=document.createElementNS(NS,tag); for(var k in attrs) n.setAttribute(k,attrs[k]); if(parent) parent.appendChild(n); return n;}
+
+/* ---------- header / bar ---------- */
+function renderHeader(){ $("#hdr").innerHTML='<h1>'+esc(T.title)+'</h1>'+(T.subtitle?'<p class="lede">'+esc(T.subtitle)+'</p>':''); document.title=T.title+" — Threads"; }
+function renderBar(){
+  var opts=WS.timelines.map(function(t){return '<option value="'+esc(t.id)+'"'+(t.id===T.id?" selected":"")+'>'+esc(t.title)+'</option>';}).join("");
+  $("#bar").innerHTML='<label class="sr" for="tlSel" style="position:absolute;left:-9999px">Timeline</label><select id="tlSel">'+opts+'<option value="__manage">Manage timelines…</option></select>'+
+    '<button class="btn" id="newBtn">New timeline</button><button class="btn" id="impBtn">Import</button><button class="btn" id="expBtn">Export</button>'+
+    '<button class="btn" id="editBtn" aria-pressed="'+(mode==="edit")+'">'+(mode==="edit"?"Done editing":"Edit")+'</button>'+
+    (mode==="edit"?'<button class="btn" id="undoBtn"'+(undoStack.length?"":" disabled")+'>Undo</button>':'')+
+    (ART&&canPublish?'<button class="btn" id="pubBtn">Publish to this page</button>':'')+
+    '<button class="btn quiet" id="helpBtn">How this works</button>'+
+    '<span class="status" id="status">'+esc(statusText)+'</span>';
+  $("#tlSel").onchange=function(e){ if(e.target.value==="__manage"){e.target.value=T.id; openManage(); return;} switchTo(e.target.value); };
+  $("#newBtn").onclick=openNew; $("#impBtn").onclick=openImport; $("#expBtn").onclick=openExport;
+  $("#editBtn").onclick=function(){mode=mode==="edit"?"view":"edit"; pend=null; hiEv=null; if(mode==="view") selEv=null; if(saveTimer) saveNow(); renderAll();};
+  if($("#undoBtn")) $("#undoBtn").onclick=undo;
+  if($("#pubBtn")) $("#pubBtn").onclick=openPublish;
+  $("#helpBtn").onclick=openHelp;
+}
+function switchTo(id){ if(saveTimer) saveNow(); WS.current=id; T=cur(); undoStack=[]; selEv=null; pend=null; hiEv=null; hidden={}; follow=""; pickStartDay(); saveNow(); renderAll(); scrollToSel(false); }
+
+function renderNotices(){
+  var h=notices.map(function(n,i){
+    if(n.kind==="added") return '<div class="notice">A published timeline, “'+esc(n.title)+'”, was added to your list. <button class="btn quiet" data-open="'+esc(n.id)+'" data-i="'+i+'">Open it</button><button class="btn quiet" data-dismiss="'+i+'">Dismiss</button></div>';
+    return '<div class="notice">A newer version of “'+esc(n.title)+'” has been published here. <button class="btn" data-load="'+i+'">Load it, replacing my copy</button><button class="btn" data-both="'+i+'">Load it as a separate copy</button><button class="btn quiet" data-keep="'+i+'">Keep mine</button></div>';
+  }).join("");
+  var box=$("#notices"); box.innerHTML=h;
+  $$("[data-dismiss]",box).forEach(function(b){b.onclick=function(){notices.splice(+b.dataset.dismiss,1); renderNotices();};});
+  $$("[data-open]",box).forEach(function(b){b.onclick=function(){notices.splice(+b.dataset.i,1); switchTo(b.dataset.open);};});
+  $$("[data-keep]",box).forEach(function(b){b.onclick=function(){var n=notices[+b.dataset.keep]; var s=seedTls.filter(function(t){return t.id===n.id;})[0]; var m=WS.timelines.filter(function(t){return t.id===n.id;})[0]; if(m&&s) m.basedOn=s.publishedAt; notices.splice(+b.dataset.keep,1); saveNow(); renderNotices();};});
+  $$("[data-load]",box).forEach(function(b){b.onclick=function(){var n=notices[+b.dataset.load]; var s=seedTls.filter(function(t){return t.id===n.id;})[0]; if(!s) return;
+    var i=WS.timelines.map(function(t){return t.id;}).indexOf(n.id); var c=clone(s); c.basedOn=s.publishedAt;
+    var mine=WS.timelines[i]; if(mine){ var sec={}; mine.events.forEach(function(e){if(e.secret) sec[e.id]=e.secret;}); c.events.forEach(function(e){if(sec[e.id]) e.secret=sec[e.id];}); }
+    if(n.id===T.id) snap(); WS.timelines[i]=c; if(n.id===T.id) T=c; notices.splice(+b.dataset.load,1); saveNow(); renderAll();};});
+  $$("[data-both]",box).forEach(function(b){b.onclick=function(){var n=notices[+b.dataset.both]; var s=seedTls.filter(function(t){return t.id===n.id;})[0]; var m=WS.timelines.filter(function(t){return t.id===n.id;})[0];
+    if(!s) return; var c=clone(s); c.origin=s.id; c.id=uid("tl"); c.title=s.title+" (published)"; c.basedOn=""; delete c.publishedAt; WS.timelines.push(c); if(m) m.basedOn=s.publishedAt; notices.splice(+b.dataset.both,1); saveNow(); switchTo(c.id);};});
+}
+
+/* ---------- follow / lane chips ---------- */
+function renderFollow(){
+  var cast={}; (T.characters||[]).forEach(function(c){cast[c.name]=1;});
+  var chips=T.lanes.map(function(l){return '<button type="button" class="chip" data-lane="'+esc(l.id)+'" aria-pressed="'+(!hidden[l.id])+'" style="--c:'+esc(l.color)+'"><span class="sw"></span>'+esc(l.name)+'</button>';}).join("");
+  $("#followBox").innerHTML=chips+'<label for="fol" style="font:500 .92rem var(--sans)">Follow</label><input id="fol" type="text" list="castList" placeholder="A name or word" value="'+esc(follow)+'" autocomplete="off"><datalist id="castList">'+Object.keys(cast).sort().map(function(c){return '<option value="'+esc(c)+'">';}).join("")+'</datalist><span class="found" id="found"></span>';
+  $$(".chip",$("#followBox")).forEach(function(b){b.onclick=function(){var id=b.dataset.lane; var shown=visLanes().length; if(!hidden[id]&&shown<=1) return; hidden[id]=!hidden[id]; renderAll();};});
+  var inp=$("#fol"), t=null; inp.oninput=function(){clearTimeout(t); t=setTimeout(function(){follow=inp.value.trim(); if(follow){var ds=foundDays(); if(ds.length&&ds.indexOf(sel)<0){sel=ds[0]; selEv=null;}} draw(); renderPanel(); renderFound(); scrollToSel(false);},220);};
+  inp.onchange=function(){clearTimeout(t); follow=inp.value.trim(); if(follow){var ds=foundDays(); if(ds.length&&ds.indexOf(sel)<0){sel=ds[0]; selEv=null;}} draw(); renderPanel(); renderFound(); scrollToSel(false);};
+  renderFound();
+}
+function foundDays(){var s={}; mentionDays().forEach(function(d){s[d]=1;}); var c=followChar(); if(c) c.memberships.forEach(function(m){if(hidden[m.lane]) return; for(var d=m.from;d<=memberEnd(m);d++) if(evAt(m.lane,d)) s[d]=1;}); return Object.keys(s).map(Number).sort(function(a,b){return a-b;});}
+function renderFound(){var f=$("#found"); if(!f) return; if(!follow){f.innerHTML=""; return;} var ds=mentionDays(), c=followChar(), h="";
+  if(c&&c.memberships.length){ h+=esc("With "+c.memberships.slice().sort(function(a,b){return a.from-b.from;}).map(stintText).join(", then ")+". "); }
+  h+=ds.length?("Mentioned on "+ds.length+" "+(ds.length>1?dayWordL()+"s":dayWordL())+": "+ds.map(function(d){return '<button type="button" data-d="'+d+'">'+d+'</button>';}).join("")):(c?"":"Not mentioned yet.");
+  f.innerHTML=h;
+  $$("button",f).forEach(function(b){b.onclick=function(){select(+b.dataset.d,true);};});}
+
+/* ---------- settings (edit mode) ---------- */
+function renderSettings(){
+  var box=$("#settingsBox");
+  if(mode!=="edit"){box.innerHTML=""; return;}
+  var open=box.dataset.open==="1";
+  var lanes=T.lanes.map(function(l,i){return '<div class="r lrow" data-l="'+esc(l.id)+'"><input type="color" value="'+esc(l.color)+'" data-f="color" aria-label="Colour for '+esc(l.name)+'"><input type="text" value="'+esc(l.name)+'" data-f="name" aria-label="Lane name"><label class="sm">Now at '+esc(dayWordL())+' <input type="number" min="1" value="'+(l.now==null?"":l.now)+'" data-f="now" placeholder="–" aria-label="Where '+esc(l.name)+' is now"></label><label class="ck"><input type="checkbox" data-r'+(l.roster?" checked":"")+'> Who’s here</label><span class="lbtns"><button class="btn quiet" data-mv="-1"'+(i===0?" disabled":"")+' aria-label="Move '+esc(l.name)+' up">Up</button><button class="btn quiet" data-mv="1"'+(i===T.lanes.length-1?" disabled":"")+' aria-label="Move '+esc(l.name)+' down">Down</button><button class="btn quiet danger" data-del>Remove</button></span></div>';}).join("");
+  var laneOpts=function(v){return T.lanes.map(function(l){return '<option value="'+esc(l.id)+'"'+(l.id===v?" selected":"")+'>'+esc(l.name)+'</option>';}).join("");};
+  var dw=esc(dayWord()), dwl=esc(dayWordL());
+  var spans=T.spans.map(function(s){ var f=s.flux, m=f?f.mode:"";
+    var seg=function(v,t){return '<button type="button" data-fmb="'+v+'" aria-pressed="'+(m===v)+'">'+t+'</button>';};
+    return '<div class="sp" data-s="'+esc(s.id)+'" style="--pc:'+esc(s.color)+'">'+
+      '<div class="r"><input type="text" value="'+esc(s.label)+'" data-f="label" placeholder="Name it, e.g. Beneath the Moonpool" aria-label="Span name"><input type="color" value="'+esc(s.color)+'" data-f="color" aria-label="Span colour"><button class="btn quiet danger" data-del>Remove</button></div>'+
+      '<div class="r"><label class="sm">On <select data-f="lane" aria-label="Lane">'+laneOpts(s.lane)+'</select></label>'+
+        '<label class="sm">from '+dwl+' <input type="number" min="1" value="'+s.from+'" data-f="from"></label>'+(s.from!==sel?'<button class="btn quiet" data-setd="from">use '+dwl+' '+sel+'</button>':'')+
+        '<label class="sm">to <input type="number" min="1" value="'+s.to+'" data-f="to"></label>'+(s.to!==sel?'<button class="btn quiet" data-setd="to">use '+dwl+' '+sel+'</button>':'')+'</div>'+
+      '<div class="r"><span class="sm">Time there runs</span><span class="seg" role="group" aria-label="How time runs there">'+seg("","the same")+seg("fast","faster")+seg("slow","slower")+'</span></div>'+
+      (f?'<div class="r">'+(m==="fast"?'<label class="sm">Each '+dwl+' here holds <input type="number" min="2" max="12" value="'+f.n+'" data-f="fn" aria-label="'+dw+'s there in each '+dwl+' here"> '+dwl+'s there</label>'
+          :'<label class="sm">Each '+dwl+' there lasts <input type="number" min="2" max="999" value="'+f.n+'" data-f="fn" aria-label="'+dw+'s here in each '+dwl+' there"> '+dwl+'s here</label>')+
+        '<label class="sm">counting from '+dwl+' <input type="number" min="1" value="'+f.start+'" data-f="fstart" aria-label="First '+dwl+' there"> there</label></div>':'')+
+      '<p class="note fprev">'+esc(spanPreview(s))+'</p></div>'; }).join("");
+  var tab=box.dataset.tab||"general", tabs=[["general","Timeline"],["lanes","Lanes ("+T.lanes.length+")"],["spans","Spans ("+T.spans.length+")"],["chars","Characters ("+T.characters.length+")"]];
+  var pane=function(id,html){return '<div class="tabp" data-p="'+id+'" role="tabpanel"'+(tab===id?"":" hidden")+'>'+html+'</div>';};
+  box.innerHTML='<details class="settings"'+(open?" open":"")+'><summary>Timeline settings</summary><div class="tabs" role="tablist">'+tabs.map(function(t){return '<button type="button" role="tab" class="tab" data-tab="'+t[0]+'" aria-selected="'+(t[0]===tab)+'">'+esc(t[1])+'</button>';}).join("")+'</div>'+
+   pane("general",'<div class="form"><label>Title<input type="text" id="setTitle" value="'+esc(T.title)+'"></label><label>Description<input type="text" id="setSub" value="'+esc(T.subtitle)+'"></label>'+
+   '<label>What to call each step <span class="hint">Day, Session, Week… Add or remove them for every lane with the buttons under the timeline, or for one lane from its block in the '+esc(dayWordL())+' panel.</span><input type="text" id="setDay" value="'+esc(T.dayLabel)+'"></label></div>')+
+   pane("lanes",'<p class="note">One per party, character, or strand of world events. “Now at” marks where that lane is in the story. Tick “Who’s here” for lanes that people travel with.</p><div class="tbl" id="laneTbl">'+lanes+'</div><p><button class="btn" id="addLane">Add a lane</button></p>')+
+   pane("spans",'<p class="note">Shade a stretch of a lane: time in another realm, a siege, a journey. If time runs differently there, say how. Faster gives each '+esc(dayWordL())+' here several spots, one per '+esc(dayWordL())+' there; slower joins several '+esc(dayWordL())+'s here into one spot.</p><div class="tbl" id="spanTbl">'+(spans||'<p class="note">No spans yet.</p>')+'</div><p><button class="btn" id="addSpan">Add a span from '+esc(dayWordL())+' '+sel+'</button></p>')+
+   pane("chars",'<p class="note">Each character has one or more stints: which lane they’re with, and from which '+esc(dayWordL())+' to which. Leave “to” empty if they’re still there. The '+esc(dayWordL())+' panel in edit mode is the quickest way to move people.</p>'+
+   '<input type="text" id="charFilter" placeholder="Find a character" aria-label="Find a character" style="margin:0 0 8px">'+
+   '<div class="tbl" id="charTbl">'+charRows(laneOpts)+'</div><p><button class="btn" id="addChar">Add a character</button></p>')+'</details>';
+  var showTab=function(id){box.dataset.tab=id; $$(".tab",box).forEach(function(b){b.setAttribute("aria-selected",String(b.dataset.tab===id));}); $$(".tabp",box).forEach(function(p){p.hidden=p.dataset.p!==id;});};
+  $$(".tab",box).forEach(function(b){b.onclick=function(){showTab(b.dataset.tab);};});
+  var det=$("details",box); det.ontoggle=function(){box.dataset.open=det.open?"1":"0";};
+  function bindField(inp,apply){var snapped=false; inp.addEventListener("focus",function(){snapped=false;}); inp.addEventListener("input",function(){if(!snapped){snap(); snapped=true;} if(apply(inp)===false) return; touch(); renderHeader(); draw(); renderLaneLabels(); renderLegend();}); inp.addEventListener("change",function(){renderBar(); renderFollowSoft();});}
+  bindField($("#setTitle"),function(i){T.title=str(i.value,200)||"Untitled campaign";});
+  bindField($("#setSub"),function(i){T.subtitle=str(i.value,600);});
+  bindField($("#setDay"),function(i){T.dayLabel=str(i.value,30)||"Day";});
+  $$("#laneTbl .r").forEach(function(r){var l=laneById(r.dataset.l);
+    $$("[data-f]",r).forEach(function(inp){bindField(inp,function(i){var f=i.dataset.f; if(f==="name") l.name=str(i.value,80)||"Lane"; else if(f==="color") l.color=hex(i.value); else if(f==="now") l.now=i.value===""?null:num(i.value,null);});});
+    var rk=$("[data-r]",r); rk.onchange=function(){snap(); l.roster=rk.checked; touch(); renderPanel();};
+    $$("[data-mv]",r).forEach(function(b){b.onclick=function(){var i=T.lanes.indexOf(l),j=i+(+b.dataset.mv); if(j<0||j>=T.lanes.length) return; snap(); T.lanes.splice(i,1); T.lanes.splice(j,0,l); touch(); renderAll();};});
+    $("[data-del]",r).onclick=function(){var n=T.events.filter(function(e){return e.lane===l.id;}).length; if(T.lanes.length<=1){setStatus("A timeline needs at least one lane"); return;}
+      confirmDlg("Remove “"+l.name+"”?", n?("This also removes its "+n+" event"+(n>1?"s":"")+", and any spans and connections on it. You can undo this."):"You can undo this.","Remove lane").then(function(ok){if(!ok) return; snap();
+        T.lanes=T.lanes.filter(function(x){return x!==l;}); T.events=T.events.filter(function(e){return e.lane!==l.id;}); T.spans=T.spans.filter(function(s){return s.lane!==l.id;}); T.crossings=T.crossings.filter(function(c){return c.from.lane!==l.id&&c.to.lane!==l.id;}); T.characters.forEach(function(c){c.memberships=c.memberships.filter(function(m){return m.lane!==l.id;});}); delete hidden[l.id]; if(selEv&&!evById(selEv)) selEv=null; touch(); renderAll();});};
+  });
+  $("#addLane").onclick=function(){snap(); T.lanes.push({id:uid("l"),name:"New lane",color:PALETTE[T.lanes.length%PALETTE.length],now:null,roster:true}); touch(); box.dataset.open="1"; box.dataset.tab="lanes"; renderAll(); var ins=$$("#laneTbl .r"); if(ins.length) $("[data-f=name]",ins[ins.length-1]).select();};
+  $$("#spanTbl .sp").forEach(function(r){var s=T.spans.filter(function(x){return x.id===r.dataset.s;})[0];
+    var blocked=function(){setStatus("That would leave an event without a spot in a faster "+dayWordL()+". Move or delete it first."); return true;};
+    $$("[data-f]",r).forEach(function(inp){bindField(inp,function(i){var before=clone(s), f=i.dataset.f;
+      if(f==="lane") s.lane=i.value; else if(f==="color") s.color=hex(i.value); else if(f==="label") s.label=str(i.value,80);
+      else if(f==="fn"){ if(s.flux) s.flux.n=Math.min(s.flux.mode==="fast"?12:999,Math.max(2,num(i.value,s.flux.n))); }
+      else if(f==="fstart"){ if(s.flux) s.flux.start=Math.max(1,num(i.value,s.flux.start)); }
+      else { s[f]=Math.min(T.dayCount,Math.max(1,num(i.value,s[f]))); if(s.from>s.to){var a=s.from; s.from=s.to; s.to=a;} }
+      if(fastBroken()||slowClashes().length){ var fb=fastBroken(); Object.keys(before).forEach(function(k){s[k]=before[k];}); i.dataset.bad=fb?"fast":"slow"; if(fb) blocked(); return false; }
+      delete i.dataset.bad; var pv=$(".fprev",r); if(pv) pv.textContent=spanPreview(s); });
+      inp.addEventListener("change",function(){ var bad=inp.dataset.bad; if(!bad) return; delete inp.dataset.bad;
+        if(bad==="fast"){ renderSettings(); return; }
+        var f=inp.dataset.f, v=inp.value; trySpanChange(s,function(x){ if(f==="fn") x.flux.n=Math.min(x.flux.mode==="fast"?12:999,Math.max(2,num(v,x.flux.n))); else if(f==="fstart") x.flux.start=Math.max(1,num(v,x.flux.start)); else if(f==="lane") x.lane=v; else x[f]=Math.min(T.dayCount,Math.max(1,num(v,x[f]))); }); });});
+    $$("[data-fmb]",r).forEach(function(b){ b.onclick=function(){ var v=b.dataset.fmb, prev=s.flux; if((prev?prev.mode:"")===v) return; box.dataset.open="1"; box.dataset.tab="spans";
+      trySpanChange(s,function(x){ x.flux=v?{mode:v,n:Math.min(v==="fast"?12:999,(prev&&prev.n)||(v==="fast"?3:2)),start:(prev&&prev.start)||1}:null; }); }; });
+    $$("[data-setd]",r).forEach(function(b){ b.onclick=function(){ var f=b.dataset.setd; trySpanChange(s,function(x){x[f]=sel;}); }; });
+    $("[data-del]",r).onclick=function(){snap(); var keep=T.spans; T.spans=T.spans.filter(function(x){return x!==s;}); if(subsBroken()){T.spans=keep; undoStack.pop(); blocked(); return;} touch(); renderAll();};
+  });
+  $("#addSpan").onclick=function(){snap(); T.spans.push({id:uid("s"),lane:(visLanes()[0]||T.lanes[0]).id,from:sel,to:Math.min(T.dayCount,sel+2),label:"",color:PALETTE[4],flux:null}); touch(); box.dataset.open="1"; box.dataset.tab="spans"; renderAll();};
+  bindChars(box);
+}
+function charRows(laneOpts){
+  return (T.characters||[]).map(function(c){
+    var st=c.memberships.map(function(m,i){return '<div class="r st" data-i="'+i+'"><select data-f="lane" aria-label="Lane">'+laneOpts(m.lane)+'</select><label>from <input type="number" min="1" data-f="from" value="'+m.from+'"></label><label>to <input type="number" min="1" data-f="to" value="'+(m.to==null?"":m.to)+'" placeholder="now"></label><input type="text" data-f="note" value="'+esc(m.note)+'" placeholder="Why it ends, e.g. dies" aria-label="Note for this stint"><button class="btn" data-dels>Remove stint</button></div>';}).join("");
+    return '<div class="char" data-c="'+esc(c.id)+'" data-name="'+esc(c.name.toLowerCase())+'"><div class="r"><input type="text" data-f="name" value="'+esc(c.name)+'" aria-label="Character name" style="font-weight:700"><button class="btn" data-move>Changes group on '+esc(dayWordL())+' '+sel+'</button><button class="btn" data-adds>Add a stint</button><button class="btn danger" data-delc>Remove character</button></div><div class="stints">'+(st||'<p class="note">No stints yet.</p>')+'</div></div>';
+  }).join("");
+}
+function bindChars(box){
+  var cf=$("#charFilter",box); if(cf) cf.oninput=function(){var q=cf.value.trim().toLowerCase(); $$(".char",box).forEach(function(r){r.hidden=q&&r.dataset.name.indexOf(q)<0;});};
+  function after(){draw(); renderFound(); if(mode==="edit"&&!selEv) renderPanel();}
+  $$(".char",box).forEach(function(r){ var c=T.characters.filter(function(x){return x.id===r.dataset.c;})[0]; if(!c) return; var sn=false;
+    var nm=$("[data-f=name]",r); nm.onfocus=function(){sn=false;}; nm.oninput=function(){if(!sn){snap(); sn=true;} c.name=str(nm.value,80).trim()||"Someone"; r.dataset.name=c.name.toLowerCase(); touch();}; nm.onchange=function(){renderFollowSoft(); after();};
+    $$(".st",r).forEach(function(sr){ var m=c.memberships[+sr.dataset.i]; var s2=false;
+      $$("[data-f]",sr).forEach(function(inp){ inp.onfocus=function(){s2=false;};
+        inp.addEventListener(inp.tagName==="SELECT"?"change":"input",function(){ if(!s2){snap(); s2=true;} var f=inp.dataset.f;
+          if(f==="lane") m.lane=inp.value; else if(f==="note") m.note=str(inp.value,120);
+          else if(f==="from"){ m.from=Math.max(1,num(inp.value,m.from)); if(m.from>T.dayCount){T.dayCount=m.from;} if(m.to!=null&&m.to<m.from) m.to=m.from; }
+          else if(f==="to"){ m.to=inp.value===""?null:Math.max(m.from,num(inp.value,m.from)); if(m.to!=null&&m.to>T.dayCount) T.dayCount=m.to; }
+          touch(); after(); });
+      });
+      $("[data-dels]",sr).onclick=function(){snap(); c.memberships.splice(+sr.dataset.i,1); touch(); renderSettings(); after();};
+    });
+    $("[data-adds]",r).onclick=function(){snap(); var last=c.memberships.slice().sort(function(a,b){return a.from-b.from;}).pop(); c.memberships.push({lane:(visLanes()[0]||T.lanes[0]).id,from:last?Math.min(T.dayCount,(last.to||memberEnd(last))+1):sel,to:null,note:""}); touch(); renderSettings(); after();};
+    $("[data-move]",r).onclick=function(){ snap(); var d=sel, open=c.memberships.filter(function(m){return m.from<=d&&(m.to==null||m.to>=d);})[0];
+      var from=open?open.lane:null;
+      if(open){ if(open.from<d){ open.to=d-1; } else { c.memberships.splice(c.memberships.indexOf(open),1); } }
+      var other=T.lanes.filter(function(l){return l.id!==from;})[0]||T.lanes[0];
+      c.memberships.push({lane:other.id,from:d,to:open&&open.to!=null&&open.to>=d?null:null,note:""});
+      touch(); renderSettings(); after(); setStatus(c.name+" now changes group on "+dayWordL()+" "+d+". Pick the new lane in their stints.");
+      var rows=$$('.char[data-c="'+c.id+'"] .st',box); if(rows.length){var sl=$("select",rows[rows.length-1]); if(sl) sl.focus();} };
+    $("[data-delc]",r).onclick=function(){snap(); T.characters=T.characters.filter(function(x){return x!==c;}); if(followChar()===null&&follow===c.name) follow=""; touch(); renderSettings(); renderFollowSoft(); after();};
+  });
+  var ac=$("#addChar",box); if(ac) ac.onclick=function(){box.dataset.tab="chars"; snap(); var c={id:uid("c"),name:"New character",memberships:[{lane:(visLanes()[0]||T.lanes[0]).id,from:sel,to:null,note:""}]}; T.characters.push(c); touch(); box.dataset.open="1"; renderSettings(); renderFollowSoft();
+    var rows=$$(".char",box); var n=rows.length?$("[data-f=name]",rows[rows.length-1]):null; if(n){n.focus(); n.select();}};
+}
+function renderFollowSoft(){var v=follow; renderFollow(); var i=$("#fol"); if(i) i.value=v;}
+
+/* ---------- timeline svg ---------- */
+function renderLaneLabels(){var v=visLanes(); var box=$("#laneLabels"); box.style.height=(Y(v.length-1)+46)+"px";
+  box.innerHTML=v.map(function(l,i){return '<span style="top:'+Y(i)+'px;color:'+esc(l.color)+'" title="'+esc(l.name)+'">'+esc(l.name)+'</span>';}).join("");}
+function draw(){
+  layout(); var v=visLanes(), W=X(T.dayCount+(mode==="edit"?1:0))+PADX, H=Y(Math.max(0,v.length-1))+46;
+  svg.setAttribute("viewBox","0 0 "+W+" "+H); svg.setAttribute("width",W); svg.setAttribute("height",H); svg.setAttribute("aria-label","Timeline, "+dayWord().toLowerCase()+"s 1 to "+T.dayCount);
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+  var defs=el("defs",{},svg), pats={};
+  T.spans.forEach(function(s){ if(pats[s.color]) return; var id="h"+s.color.slice(1); pats[s.color]=id; var p=el("pattern",{id:id,width:6,height:6,patternUnits:"userSpaceOnUse",patternTransform:"rotate(45)"},defs); el("line",{x1:0,y1:0,x2:0,y2:6,stroke:s.color,"stroke-width":1.6,opacity:.6},p); });
+  el("rect",{x:CL(sel),y:6,width:CW(sel),height:H-10,rx:6,fill:"var(--band)"},svg);
+  for(var dh=1;dh<=T.dayCount;dh++){(function(d){ var r=el("rect",{"class":"colhit",x:CL(d),y:6,width:CW(d),height:H-10,fill:"transparent"},svg); var t=el("title",{},r); t.textContent=dayWord()+" "+d;
+    r.addEventListener("click",function(){pickDay(d);}); })(dh);}
+  var every=T.dayCount>120?5:(T.dayCount>60?2:1);
+  for(var d=1;d<=T.dayCount;d++){ if(d!==sel&&d!==1&&d%every) continue; var t=el("text",{x:X(d),y:26,"text-anchor":"middle","class":"dayn"+(d===sel?" sel":"")},svg); t.textContent=d; }
+  if(mode==="edit"){ var pg=el("g",{"class":"node",role:"button","aria-label":"Add a "+dayWordL()},svg); el("circle",{cx:X(T.dayCount+1),cy:21,r:11,fill:"transparent",stroke:"var(--muted)","stroke-width":1.2,"stroke-dasharray":"2 2"},pg); var pt=el("text",{x:X(T.dayCount+1),y:26,"text-anchor":"middle","class":"dayn"},pg); pt.textContent="+"; pg.addEventListener("click",function(){addDays(1);}); var tt=el("title",{},pg); tt.textContent="Add a "+dayWordL(); }
+  T.spans.forEach(function(s){var i=laneIndex(s.lane); if(i<0) return; var x0=CL(s.from)+5, x1=CL(s.to)+CW(s.to)-5; var r=el("rect",{"class":"spanr",x:x0,y:Y(i)-20,width:x1-x0,height:40,rx:8,fill:"url(#"+pats[s.color]+")",stroke:s.color,"stroke-width":.8},svg);
+    var tip=[s.label,s.flux?("time runs "+(s.flux.mode==="fast"?"faster":"slower")+": "+fluxWords(s)):""].filter(Boolean).join(", "); if(tip){var tt=el("title",{},r); tt.textContent=tip;}
+    if(!s.flux) return;
+    if(s.flux.mode==="fast"){ for(var d=s.from;d<=s.to;d++) for(var k=1;k<=s.flux.n;k++){ var lt=el("text",{x:subX(s.lane,d,k),y:Y(i)+17,"text-anchor":"middle","class":"loc"},svg); lt.textContent=localDay(s,d,k); } }
+    else { for(var d0=s.from;d0<=s.to;d0+=s.flux.n){ el("line",{x1:CL(d0)+6,y1:Y(i)-13,x2:CL(d0)+6,y2:Y(i)+13,stroke:s.color,"stroke-width":1.4},svg); var lt2=el("text",{x:CL(d0)+10,y:Y(i)+17,"class":"loc"},svg); lt2.textContent=localDay(s,d0); } } });
+  v.forEach(function(l,i){var ds=T.events.filter(function(e){return e.lane===l.id;}).map(function(e){return e.day;}); if(mode==="edit"&&!ds.length) ds=[1,T.dayCount]; if(!ds.length) return;
+    var a=Math.min.apply(null,ds), b=Math.max.apply(null,ds); if(l.now) b=Math.max(b,l.now);
+    el("line",{x1:X(a),y1:Y(i),x2:X(b),y2:Y(i),stroke:l.color,"stroke-width":2.5,"stroke-dasharray":"7 5","stroke-linecap":"round",opacity:ds.length?1:.35},svg);});
+  if(mode==="edit") v.forEach(function(l,i){for(var d=1;d<=T.dayCount;d++){ var bk=blockOf(T,l.id,d); if(bk&&d!==bk.start) continue; var n=slotsAt(l.id,d), bw=bk?CL(bk.end)+CW(bk.end)-CL(d):CW(d); for(var k=1;k<=n;k++){(function(l,d,i,k,n,bw){var c=el("rect",{"class":"cell",x:CL(d)+(k-1)*bw/n,y:Y(i)-LANEH/2,width:bw/n,height:LANEH,fill:"transparent"},svg);
+    c.addEventListener("click",function(){var e=evAtSub(l.id,d,k); if(e){selEv=e.id; sel=d; pend=null; renderAll();} else pickSpot(l.id,d,k);});
+    if(!evAtSub(l.id,d,k)){c.addEventListener("mouseenter",function(){c.setAttribute("fill","var(--band)");}); c.addEventListener("mouseleave",function(){c.setAttribute("fill","transparent");});}})(l,d,i,k,n,bw);}}});
+  T.crossings.forEach(function(c){var i1=laneIndex(c.from.lane),i2=laneIndex(c.to.lane); if(i1<0||i2<0) return;
+    var x1=X(c.from.day),y1=Y(i1),x2=X(c.to.day),y2=Y(i2),my=(y1+y2)/2, act=(c.from.day===sel||c.to.day===sel);
+    if(y1===y2) my=y1-30;
+    el("path",{d:"M"+x1+" "+y1+" C "+x1+" "+my+", "+x2+" "+my+", "+x2+" "+y2,fill:"none",stroke:act?"var(--ink)":"var(--muted)","stroke-width":act?1.8:1.2,"stroke-dasharray":"3 4",opacity:act?.9:.6,"pointer-events":"none"},svg);
+    el("circle",{cx:(x1+x2)/2,cy:my,r:act?3.6:2.8,fill:act?"var(--ink)":"var(--muted)","pointer-events":"none"},svg);});
+  var fc=followChar();
+  if(fc){ var prev=null; fc.memberships.slice().sort(function(a,b){return a.from-b.from;}).forEach(function(m){ var i=laneIndex(m.lane); if(i<0){prev=null; return;} var a=m.from, b=memberEnd(m);
+      el("line",{x1:X(a),y1:Y(i),x2:X(b),y2:Y(i),stroke:"var(--ink)","stroke-width":10,"stroke-linecap":"round",opacity:.15,"pointer-events":"none"},svg);
+      if(prev&&prev.i!==i){var my=(Y(prev.i)+Y(i))/2; el("path",{d:"M"+X(prev.b)+" "+Y(prev.i)+" C "+X(prev.b)+" "+my+", "+X(a)+" "+my+", "+X(a)+" "+Y(i),fill:"none",stroke:"var(--ink)","stroke-width":10,"stroke-linecap":"round",opacity:.15,"pointer-events":"none"},svg);}
+      prev={b:b,i:i}; }); }
+  v.forEach(function(l,i){T.events.filter(function(e){return e.lane===l.id;}).forEach(function(e){
+    var sb=blockOf(T,e.lane,e.day); if(sb&&sb.end>sb.start) el("rect",{"class":"slowbar",x:CL(sb.start)+8,y:Y(i)-4,width:CL(sb.end)+CW(sb.end)-CL(sb.start)-16,height:8,rx:4,fill:l.color,opacity:.3,"pointer-events":"none"},svg);
+    var cx=subX(e.lane,e.day,e.sub),cy=Y(i),isNow=l.now===e.day,up=e.status==="upcoming",faint=e.status==="placeholder",off=!nodeLit(e),isSel=selEv===e.id;
+    var g=el("g",{"class":"node",role:"button","aria-label":dayWord()+" "+e.day+(fluxAt(e.lane,e.day)?" ("+localText(e).replace(/^.*: /,"")+")":"")+", "+l.name+": "+e.title},svg);
+    el("circle",{cx:cx,cy:cy,r:16,fill:"transparent"},g);
+    if(isNow) el("circle",{cx:cx,cy:cy,r:13,fill:"none",stroke:l.color,"stroke-width":1.6},g);
+    if(isSel) el("circle",{cx:cx,cy:cy,r:15,fill:"none",stroke:"var(--ink)","stroke-width":2},g);
+    el("circle",{cx:cx,cy:cy,r:e.day===sel?8:6.5,fill:up?"var(--ground)":l.color,stroke:l.color,"stroke-width":up?2.2:0,opacity:off?.14:(faint?.45:1)},g);
+    if(follow&&matches(e)) el("circle",{cx:cx,cy:cy,r:11,fill:"none",stroke:"var(--ink)","stroke-width":1.4,"stroke-dasharray":"2 2"},g);
+    if(e.secret&&mode==="edit") el("circle",{cx:cx+8,cy:cy-8,r:3,fill:"var(--ink)"},g);
+    g.addEventListener("click",function(ev){ev.stopPropagation(); if(mode==="edit") pickEvent(e); else select(e.day,true);});
+    g.addEventListener("dblclick",function(ev){ev.stopPropagation(); if(mode==="edit"){selEv=e.id; sel=e.day; pend=null; hiEv=null; renderAll();}});
+    if(mode==="edit"&&hiEv===e.id&&!selEv) el("circle",{cx:cx,cy:cy,r:12,fill:"none",stroke:"var(--ink)","stroke-width":1.4,"stroke-dasharray":"3 3","pointer-events":"none"},g);
+  });});
+  if(mode==="edit"&&pend&&pend.day===sel&&!selEv){ var pi=laneIndex(pend.lane); if(pi>=0){ var pn=slotsAt(pend.lane,pend.day), pk=Math.min(pend.sub||1,pn), pb=blockOf(T,pend.lane,pend.day), pw=(pb?CL(pb.end)+CW(pb.end)-CL(pend.day):CW(pend.day))/pn;
+    el("rect",{"class":"pendmark",x:CL(pend.day)+(pk-1)*pw+3,y:Y(pi)-LANEH/2+8,width:pw-6,height:LANEH-16,rx:8,fill:"none",stroke:"var(--ink)","stroke-width":1.4,"stroke-dasharray":"3 3","pointer-events":"none"},svg); } }
+  var lx=$$("#laneLabels span"); if(lx.length!==v.length) renderLaneLabels();
+}
+function renderDayOps(){ var b=$("#dayOps"); if(mode!=="edit"){b.innerHTML=""; return;} var dw=dayWordL();
+  b.innerHTML='<div class="bar" style="margin:10px 0 0"><button class="btn" id="add1">Add a '+esc(dw)+'</button><button class="btn" id="add5">Add five</button><button class="btn" id="insD">Insert a '+esc(dw)+' before '+esc(dw)+' '+sel+' on every lane</button><button class="btn danger" id="rmD"'+(T.dayCount<=1?" disabled":"")+'>Remove '+esc(dw)+' '+sel+' from every lane</button></div><p class="note" style="margin:6px 0 0">To add or remove a '+esc(dw)+' for just one lane, use the buttons in its block below.</p>';
+  $("#add1",b).onclick=function(){addDays(1);}; $("#add5",b).onclick=function(){addDays(5);}; $("#insD",b).onclick=function(){insertDay(sel);}; $("#rmD",b).onclick=function(){removeDay(sel);};
+}
+function renderLegend(){
+  var sp={}; T.spans.forEach(function(s){if(s.label) sp[s.label+"|"+s.color]=s;});
+  $("#legend").innerHTML='<span><svg width="22" height="22"><circle cx="11" cy="11" r="6" fill="var(--ink)"/><circle cx="11" cy="11" r="10" fill="none" stroke="var(--ink)" stroke-width="1.5"/></svg>Where a lane is now</span>'+
+   '<span><svg width="22" height="22"><circle cx="11" cy="11" r="6" fill="var(--ground)" stroke="var(--ink)" stroke-width="2"/></svg>Upcoming</span>'+
+   '<span><svg width="22" height="22"><circle cx="11" cy="11" r="6" fill="var(--ink)" opacity=".45"/></svg>Placeholder</span>'+
+   Object.keys(sp).map(function(k){var s=sp[k]; return '<span><svg width="30" height="16"><rect x="1" y="1" width="28" height="14" rx="3" fill="none" stroke="'+esc(s.color)+'" stroke-width="1.2" stroke-dasharray="2 2"/></svg>'+esc(s.label)+'</span>';}).join("")+
+   '<span><svg width="30" height="16"><path d="M2 8 C 10 1, 20 15, 28 8" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="15" cy="8" r="3" fill="var(--muted)"/></svg>A connection between lanes</span>'+
+   (mode==="edit"?'<span><svg width="16" height="16"><circle cx="8" cy="8" r="3" fill="var(--ink)"/></svg>Has a private note</span>':'');
+}
+
+/* ---------- panel ---------- */
+function activeDays(){var s={}; T.events.forEach(function(e){if(!hidden[e.lane]) s[e.day]=1;}); Object.keys(T.dayNotes).forEach(function(d){s[d]=1;}); if(mode==="edit") for(var d=1;d<=T.dayCount;d++) s[d]=1; return Object.keys(s).map(Number).sort(function(a,b){return a-b;});}
+function stepper(){var ad=activeDays(), i=ad.indexOf(sel);
+  var prev=i>0?ad[i-1]:(i<0?ad.filter(function(d){return d<sel;}).pop():null), next=i>=0&&i<ad.length-1?ad[i+1]:(i<0?ad.filter(function(d){return d>sel;})[0]:null);
+  return '<div class="steps"><button class="btn" id="prevD"'+(prev?' data-d="'+prev+'"':" disabled")+'>Previous</button><button class="btn" id="nextD"'+(next?' data-d="'+next+'"':" disabled")+'>Next</button></div>';}
+function bindStepper(){["#prevD","#nextD"].forEach(function(s){var b=$(s); if(b&&b.dataset.d) b.onclick=function(){select(+b.dataset.d,true);};});}
+function crossHere(){return T.crossings.filter(function(c){return (c.from.day===sel||c.to.day===sel)&&!hidden[c.from.lane]&&!hidden[c.to.lane];});}
+var openEv={}, allOpen=false;
+try{allOpen=localStorage.getItem("threads-open")==="1";}catch(x){}
+function eventMore(e){var st=STATUS[e.status]||{}, bits=[];
+  if(e.beats.length) bits.push(e.beats.length+" beat"+(e.beats.length>1?"s":"")); if(e.quotes.length) bits.push(e.quotes.length+" quote"+(e.quotes.length>1?"s":""));
+  if(e.notes||st.note) bits.push("notes"); if(e.secret) bits.push("private note"); return bits;}
+function eventHTML(e,l,fold){
+  var st=STATUS[e.status]||{};
+  var head='<div class="who">'+esc(l.name)+'</div><h3>'+hl(e.title)+'</h3>'+(e.where?'<p class="where">'+hl(e.where)+'</p>':'')+(fluxAt(e.lane,e.day)?'<p class="loct">'+esc(localText(e))+'</p>':'')+
+   (e.summary?'<p class="sum">'+hl(e.summary)+'</p>':'');
+  var body=(e.beats.length?'<ol class="beats">'+e.beats.map(function(b){return '<li>'+hl(b)+'</li>';}).join("")+'</ol>':'')+
+   e.quotes.map(function(q){return '<figure class="q"><blockquote>'+hl(q.text)+'</blockquote>'+(q.who?'<figcaption>'+hl(q.who)+'</figcaption>':'')+'</figure>';}).join("")+
+   (e.notes?'<p class="note">'+hl(e.notes)+'</p>':'')+(st.note?'<p class="note">'+esc(st.note)+'</p>':'')+
+   (e.secret?'<div class="secret"><b>Private note.</b> '+hl(e.secret)+'</div>':'');
+  if(!fold||!body) return '<article class="event" style="--pc:'+esc(l.color)+'">'+head+body+'</article>';
+  var more=eventMore(e), inside=follow&&!new RegExp("\\b"+reEsc(follow)+"\\b","i").test([l.name,e.title,e.where,e.summary].join(" "))&&matches(e);
+  var open=inside||(e.id in openEv?openEv[e.id]:allOpen);
+  return '<details class="event fold" data-ev="'+esc(e.id)+'" style="--pc:'+esc(l.color)+'"'+(open?" open":"")+'><summary>'+head+
+    '<span class="more"><span class="show">Show '+esc(more.join(", "))+'</span><span class="hide">Hide details</span>'+(inside?' <mark>'+esc(follow)+' is mentioned inside</mark>':'')+'</span></summary><div class="evbody">'+body+'</div></details>';
+}
+function renderPanel(){
+  var p=$("#panel");
+  if(mode==="edit"&&selEv&&evById(selEv)) return renderEditor(p);
+  var nowHere=visLanes().filter(function(l){return l.now===sel;}).map(function(l){return l.name;});
+  var h='<div class="dhead"><h2>'+esc(dayWord())+' '+sel+'</h2>'+(nowHere.length?'<span class="status">'+esc(nowHere.join(" and "))+' '+(nowHere.length>1?"are":"is")+' here now</span>':'')+stepper()+'</div>';
+  if(mode==="edit"){
+    h+='<div class="form"><label>Notes for this '+esc(dayWord().toLowerCase())+' <span class="hint">Anything that isn’t tied to one lane</span><textarea id="dayNote">'+esc(T.dayNotes[sel]||"")+'</textarea></label></div>';
+    visLanes().forEach(function(l){var es=eventsAt(l.id,sel), fr=firstFree(l.id,sel);
+      var isH=hiEv&&es.some(function(e){return e.id===hiEv;}), isP=pend&&pend.day===sel&&pend.lane===l.id, pk=isP&&(pend.sub||1), pfree=isP&&!evAtSub(l.id,sel,pk)&&pk<=slotsAt(l.id,sel);
+      h+='<div class="laneblk'+(isP||isH?' pick':'')+'" style="--pc:'+esc(l.color)+'"><h3 style="font:700 .95rem var(--sans);color:'+esc(l.color)+';margin:0 0 4px">'+esc(l.name)+'</h3>'+(es.length?'<ul class="evlist">'+es.map(function(e){return '<li><button class="btn'+(e.id===hiEv?' hi':'')+'" data-edit="'+esc(e.id)+'">Edit “'+esc(e.title)+'”</button>'+(fluxAt(e.lane,e.day)?' <span class="note" style="display:inline">'+esc(localText(e).replace(/^.*: /,""))+'</span>':'')+'</li>';}).join("")+'</ul>':'')+(fr?'<button class="btn" data-add="'+esc(l.id)+'"'+(pfree?' data-sub="'+pk+'"':'')+'>'+(pfree?'Add an event here'+(slotsAt(l.id,sel)>1?' ('+esc(dayWord().toLowerCase())+' '+localDay(fluxAt(l.id,sel),sel,pk)+' there)':''):(es.length?'Add another event':'Add an event'))+'</button>':'')+
+        '<div class="lops"><button class="btn quiet" data-lins="'+esc(l.id)+'" title="Only this lane: its '+esc(dayWordL())+' '+sel+' onward moves one later">Insert a '+esc(dayWordL())+' here</button><button class="btn quiet" data-lrm="'+esc(l.id)+'" title="Only this lane: its later '+esc(dayWordL())+'s move one earlier">Remove this '+esc(dayWordL())+'</button></div></div>';});
+    h+=rosterEditor();
+    var cs=T.crossings.filter(function(c){return c.from.day===sel||c.to.day===sel;});
+    var laneOpt=function(v){return T.lanes.map(function(l){return '<option value="'+esc(l.id)+'"'+(l.id===v?" selected":"")+'>'+esc(l.name)+'</option>';}).join("");};
+    h+='<div class="cross"><h4>Connections</h4><p class="note">Link two moments on different lanes, or the same lane on different '+esc(dayWord().toLowerCase())+'s.</p><div class="tbl">'+cs.map(function(c){return '<div class="r" data-x="'+esc(c.id)+'"><select data-f="fl" aria-label="From lane">'+laneOpt(c.from.lane)+'</select><input type="number" min="1" data-f="fd" value="'+c.from.day+'" aria-label="From '+esc(dayWord())+'"><span>to</span><select data-f="tl" aria-label="To lane">'+laneOpt(c.to.lane)+'</select><input type="number" min="1" data-f="td" value="'+c.to.day+'" aria-label="To '+esc(dayWord())+'"><input type="text" data-f="text" value="'+esc(c.text)+'" placeholder="What connects them" aria-label="Connection description"><button class="btn danger" data-del>Remove</button></div>';}).join("")+'</div><p><button class="btn" id="addX">Add a connection</button></p></div>';
+    p.innerHTML=h; bindStepper();
+    var dn=$("#dayNote"), sn=false; dn.onfocus=function(){sn=false;}; dn.oninput=function(){if(!sn){snap(); sn=true;} var v=str(dn.value,4000); if(v) T.dayNotes[sel]=v; else delete T.dayNotes[sel]; touch();};
+    $$("[data-edit]",p).forEach(function(b){b.onclick=function(){selEv=b.dataset.edit; hiEv=null; renderAll();};});
+    $$("[data-add]",p).forEach(function(b){b.onclick=function(){var k=b.dataset.sub&&!evAtSub(b.dataset.add,sel,+b.dataset.sub)?+b.dataset.sub:firstFree(b.dataset.add,sel); if(!k) return; pend=null; createEvent(b.dataset.add,sel,k); renderAll();};});
+    bindRoster(p);
+    $$("[data-lins]",p).forEach(function(b){b.onclick=function(){laneInsert(b.dataset.lins,sel);};});
+    $$("[data-lrm]",p).forEach(function(b){b.onclick=function(){laneRemove(b.dataset.lrm,sel);};});
+    $$("[data-x]",p).forEach(function(r){var c=T.crossings.filter(function(x){return x.id===r.dataset.x;})[0]; var sn2=false;
+      $$("[data-f]",r).forEach(function(inp){inp.onfocus=function(){sn2=false;}; inp.addEventListener(inp.tagName==="SELECT"?"change":"input",function(){if(!sn2){snap(); sn2=true;} var f=inp.dataset.f;
+        if(f==="fl") c.from.lane=inp.value; else if(f==="tl") c.to.lane=inp.value; else if(f==="fd") c.from.day=Math.min(T.dayCount,Math.max(1,num(inp.value,c.from.day))); else if(f==="td") c.to.day=Math.min(T.dayCount,Math.max(1,num(inp.value,c.to.day))); else c.text=str(inp.value,600); touch(); draw();});});
+      $("[data-del]",r).onclick=function(){snap(); T.crossings=T.crossings.filter(function(x){return x!==c;}); touch(); renderAll();};});
+    $("#addX").onclick=function(){var v=visLanes(); snap(); T.crossings.push({id:uid("x"),from:{lane:v[0].id,day:sel},to:{lane:(v[1]||v[0]).id,day:sel},text:""}); touch(); renderAll();};
+    return;
+  }
+  var any=false;
+  if(T.dayNotes[sel]){h+='<div class="daynote">'+hl(T.dayNotes[sel])+'</div>'; any=true;}
+  var evh="", folds=0; visLanes().forEach(function(l){eventsAt(l.id,sel).forEach(function(e){any=true; evh+=eventHTML(e,l,true); if(eventMore(e).length) folds++;});});
+  if(folds) h+='<div class="foldbar"><button class="btn quiet" id="foldAll">'+(allOpen?'Hide all details':'Show all details')+'</button></div>';
+  h+=evh;
+  if(!any) h+='<p class="empty">Nothing recorded for this '+esc(dayWord().toLowerCase())+' yet. Choose Edit to add something.</p>';
+  var ww=visLanes().filter(function(l){return l.roster;}).map(function(l){var r=rosterOn(l.id,sel); if(!r.stay.length&&!r.dep.length) return "";
+    var tag=function(t){return t?' <span class="note" style="display:inline">('+esc(t)+')</span>':"";};
+    return '<li><b style="color:'+esc(l.color)+'">'+esc(l.name)+'</b>: '+(r.stay.length?r.stay.map(function(x){return hl(x.c.name)+tag(arrivalOf(x.c,x.m,sel));}).join(", "):'<span class="note" style="display:inline">nobody staying</span>')+
+      (r.dep.length?'<div class="dep">Departs: '+r.dep.map(function(x){var a=arrivalOf(x.c,x.m,sel); return hl(x.c.name)+tag((a?a+", then ":"")+departureOf(x.c,x.m,sel));}).join(", ")+'</div>':'')+'</li>';}).join("");
+  var cs=crossHere(); if(cs.length) h+='<div class="cross"><h4>Where the lanes touch</h4><ul>'+cs.map(function(c){return '<li>'+hl(c.text||((laneById(c.from.lane)||{}).name+" "+c.from.day+" and "+(laneById(c.to.lane)||{}).name+" "+c.to.day))+'</li>';}).join("")+'</ul></div>';
+  if(ww) h+='<div class="cross"><h4>Who’s where</h4><ul class="roster">'+ww+'</ul></div>';
+  p.innerHTML=h; bindStepper();
+  $$("details.fold",p).forEach(function(dt){dt.addEventListener("toggle",function(){openEv[dt.dataset.ev]=dt.open;});});
+  var fa=$("#foldAll",p); if(fa) fa.onclick=function(){allOpen=!allOpen; openEv={}; try{localStorage.setItem("threads-open",allOpen?"1":"0");}catch(x){} renderPanel();};
+}
+function renderEditor(p){
+  var e=evById(selEv), l=laneById(e.lane);
+  var laneOpts=T.lanes.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===e.lane?" selected":"")+'>'+esc(x.name)+'</option>';}).join("");
+  var stOpts=Object.keys(STATUS).map(function(k){return '<option value="'+k+'"'+(k===e.status?" selected":"")+'>'+STATUS[k].label+'</option>';}).join("");
+  p.innerHTML='<div class="dhead"><h2>Editing</h2><span class="status">'+esc(l.name)+', '+esc(dayWord().toLowerCase())+' '+e.day+'</span><div class="steps"><button class="btn" id="edDone">Done</button><button class="btn danger" id="edDel">Delete event</button></div></div>'+
+   '<div class="form" id="edForm"><div class="row"><label>Lane<select data-f="lane">'+laneOpts+'</select></label><label>'+esc(dayWord())+'<input type="number" min="1" max="'+T.dayCount+'" data-f="day" value="'+e.day+'"></label><label>Status<select data-f="status">'+stOpts+'</select></label>'+subField(e)+'</div>'+
+   '<p class="err" id="edErr" hidden></p>'+
+   '<label>Title<input type="text" data-f="title" value="'+esc(e.title)+'"></label>'+
+   '<label>Place <span class="hint">Optional</span><input type="text" data-f="where" value="'+esc(e.where)+'"></label>'+
+   '<label>Summary <span class="hint">Two or three sentences</span><textarea data-f="summary">'+esc(e.summary)+'</textarea></label>'+
+   '<label>What happened, in order <span class="hint">One per line</span><textarea data-f="beats" style="min-height:9em">'+esc(e.beats.join("\n"))+'</textarea></label>'+
+   '<label>Quotes <span class="hint">One per line, as Speaker | What they said</span><textarea data-f="quotes">'+esc(e.quotes.map(function(q){return (q.who?q.who+" | ":"")+q.text;}).join("\n"))+'</textarea></label>'+
+   '<label>Notes <span class="hint">Shown to everyone</span><input type="text" data-f="notes" value="'+esc(e.notes)+'"></label>'+
+   '<label>Private note <span class="hint">Only in your copy. Left out when you publish, and when you export unless you choose to include it.</span><textarea data-f="secret">'+esc(e.secret)+'</textarea></label></div>'+
+   '<div class="cross"><h4>Preview</h4><div id="edPrev"></div></div>';
+  function prev(){$("#edPrev").innerHTML=eventHTML(e,laneById(e.lane));}
+  prev();
+  var sn=false;
+  function bindOne(inp){
+    inp.addEventListener("focus",function(){sn=false;});
+    inp.addEventListener(inp.tagName==="SELECT"?"change":"input",function(){
+      var f=inp.dataset.f, err=$("#edErr"); err.hidden=true;
+      if(f==="lane"||f==="day"||f==="sub"){var nl=f==="lane"?inp.value:e.lane, nd=laneDay(nl,f==="day"?Math.min(T.dayCount,Math.max(1,num(inp.value,e.day))):e.day), n=slotsAt(nl,nd), ns;
+        if(f==="sub"){ ns=Math.min(n,Math.max(1,num(inp.value,1))); var os=evAtSub(nl,nd,ns); if(os&&os!==e) ns=null; }
+        else { ns=(e.sub||1)<=n?(e.sub||1):1; var o=evAtSub(nl,nd,ns); if(o&&o!==e) ns=firstFree(nl,nd,e); }
+        if(!ns){err.textContent="There’s already an event for "+laneById(nl).name+" "+(f==="sub"?"then":"on "+dayWord().toLowerCase()+" "+nd)+". Edit that one, or pick another spot."; err.hidden=false; return;}
+        var slotsBefore=slotsAt(e.lane,e.day);
+        if(!sn){snap(); sn=true;} e.lane=nl; e.day=nd; if(ns>1) e.sub=ns; else delete e.sub; sel=nd; touch(); draw(); prev(); $(".dhead .status",p).textContent=laneById(e.lane).name+", "+dayWord().toLowerCase()+" "+e.day;
+        if(f!=="sub"&&(slotsBefore>1||n>1)){ var sf=$("#subWrap",p); if(sf) sf.outerHTML=subField(e)||'<span id="subWrap"></span>'; else if(n>1){ var row=$("#edForm .row",p); row.insertAdjacentHTML("beforeend",subField(e)); } var ns2=$("[data-f=sub]",p); if(ns2) bindOne(ns2); }
+        return;}
+      if(!sn){snap(); sn=true;}
+      if(f==="beats") e.beats=inp.value.split("\n").map(function(s){return s.trim();}).filter(Boolean).slice(0,80);
+      else if(f==="quotes") e.quotes=inp.value.split("\n").map(function(s){s=s.trim(); if(!s) return null; var k=s.indexOf("|"); return k>=0?{who:s.slice(0,k).trim(),text:s.slice(k+1).trim()}:{who:"",text:s};}).filter(function(q){return q&&q.text;}).slice(0,30);
+      else if(f==="status") e.status=STATUS[inp.value]?inp.value:"confirmed";
+      else if(f==="title") e.title=str(inp.value,200)||"Untitled";
+      else e[f]=str(inp.value,6000);
+      touch(); prev(); if(f==="title"||f==="status"||f==="secret") draw();
+    });
+  }
+  $$("[data-f]",$("#edForm")).forEach(bindOne);
+  $("#edDone").onclick=function(){selEv=null; renderAll();};
+  $("#edDel").onclick=function(){confirmDlg("Delete “"+e.title+"”?","You can undo this.","Delete").then(function(ok){if(!ok) return; snap(); T.events=T.events.filter(function(x){return x!==e;}); selEv=null; touch(); renderAll();});};
+  var t=$("[data-f=title]",p); if(t&&t.value==="New event"){t.focus(); t.select();}
+}
+function createEvent(lane,day,sub){day=laneDay(lane,day); snap(); var e={id:uid("e"),lane:lane,day:day,title:"New event",where:"",status:"confirmed",summary:"",beats:[],quotes:[],notes:"",secret:""}; if(sub>1) e.sub=sub; T.events.push(e); selEv=e.id; sel=day; touch(); return e;}
+
+/* ---------- select / keys ---------- */
+function scrollToSel(smooth){var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches; try{scroller.scrollTo({left:Math.max(0,X(sel)-scroller.clientWidth/2),behavior:(smooth&&!reduce)?"smooth":"auto"});}catch(e){scroller.scrollLeft=Math.max(0,X(sel)-scroller.clientWidth/2);}}
+function pickDay(d){ pend=null; hiEv=null; selEv=null; select(d,false); }
+function pickEvent(e){ selEv=null; pend=null; hiEv=e.id; select(e.day,false); var b=$('.laneblk [data-edit="'+e.id+'"]');
+  if(b){ var bl=b.closest(".laneblk"); if(bl&&bl.scrollIntoView) try{bl.scrollIntoView({block:"nearest",behavior:"smooth"});}catch(x){} try{b.focus({preventScroll:true});}catch(x){b.focus();} }
+  setStatus(dayWord()+" "+e.day+" selected. Choose Edit “"+e.title+"” to change it, or double-click it on the timeline."); }
+function pickSpot(lane,d,sub){ selEv=null; pend={lane:lane,day:d,sub:sub||1}; select(d,false);
+  var b=$(".laneblk.pick"); if(b&&b.scrollIntoView) try{b.scrollIntoView({block:"nearest",behavior:"smooth"});}catch(e){}
+  var a=b&&$("[data-add]",b); if(a) try{a.focus({preventScroll:true});}catch(e){a.focus();}
+  setStatus(laneById(lane).name+", "+dayWordL()+" "+d+" selected. Choose Add an event here, or pick something else."); }
+function select(d,sc){if(pend&&pend.day!==d) pend=null; if(hiEv){var he=evById(hiEv); if(!he||he.day!==d) hiEv=null;} sel=d; if(mode!=="edit") selEv=null; rememberView(); draw(); renderDayOps(); renderPanel(); var mv=$$("[data-move]"); mv.forEach(function(b){b.textContent="Changes group on "+dayWordL()+" "+sel;}); if(sc) scrollToSel(true);}
+scroller.addEventListener("keydown",function(e){var ad=activeDays(); if(!ad.length) return; var i=ad.indexOf(sel);
+  if(e.key==="ArrowRight"){e.preventDefault(); var n=i<0?ad.filter(function(d){return d>sel;})[0]:ad[i+1]; if(n) {selEv=null; select(n,true);}}
+  else if(e.key==="ArrowLeft"){e.preventDefault(); var p=i<0?ad.filter(function(d){return d<sel;}).pop():ad[i-1]; if(p){selEv=null; select(p,true);}}
+  else if(e.key==="Home"){e.preventDefault(); selEv=null; select(ad[0],true);} else if(e.key==="End"){e.preventDefault(); selEv=null; select(ad[ad.length-1],true);}});
+document.addEventListener("keydown",function(e){if(mode==="edit"&&(e.metaKey||e.ctrlKey)&&e.key==="z"&&!e.shiftKey){var t=e.target; if(t&&/INPUT|TEXTAREA|SELECT/.test(t.tagName)) return; e.preventDefault(); undo();}});
+
+/* ---------- dialogs ---------- */
+var dlg=$("#dlg");
+function openDlg(html,bind){dlg.innerHTML=html; if(bind) bind(dlg); if(dlg.showModal){ if(!dlg.open) dlg.showModal(); } else dlg.setAttribute("open","");}
+function closeDlg(){if(dlg.close) dlg.close(); else dlg.removeAttribute("open"); dlg.innerHTML="";}
+function confirmDlg(title,body,okLabel){return new Promise(function(res){openDlg('<h2>'+esc(title)+'</h2><p>'+esc(body)+'</p><div class="acts"><button class="btn" id="cNo">Cancel</button><button class="btn danger" id="cYes">'+esc(okLabel||"OK")+'</button></div>',function(d){
+  $("#cNo",d).onclick=function(){closeDlg(); res(false);}; $("#cYes",d).onclick=function(){closeDlg(); res(true);}; dlg.oncancel=function(){res(false);}; });});}
+function openNew(){openDlg('<h2>New timeline</h2><div class="form"><label>Title<input type="text" id="nTitle" value="Untitled campaign"></label><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="nLanes"> Start with the same lanes as “'+esc(T.title)+'”</label></div><div class="acts"><button class="btn" id="nCancel">Cancel</button><button class="btn" id="nGo">Create</button></div>',function(d){
+  var ti=$("#nTitle",d); ti.focus(); ti.select();
+  $("#nCancel",d).onclick=closeDlg;
+  $("#nGo",d).onclick=function(){var t=blankTimeline(str(ti.value,200)||"Untitled campaign"); if($("#nLanes",d).checked){t.lanes=T.lanes.map(function(l){return {id:uid("l"),name:l.name,color:l.color,now:null};});} WS.timelines.push(t); closeDlg(); mode="edit"; switchTo(t.id); var b=$("#settingsBox"); b.dataset.open="1"; renderSettings();};});}
+function openManage(){
+  function body(){return '<h2>Your timelines</h2><ul class="lib">'+WS.timelines.map(function(t){return '<li data-id="'+esc(t.id)+'"><span class="t">'+esc(t.title)+'<small>'+t.events.length+' events, '+t.lanes.length+' lanes'+(t.id===T.id?", open now":"")+'</small></span><button class="btn" data-a="open">Open</button><button class="btn" data-a="dup">Duplicate</button><button class="btn danger" data-a="del">Delete</button></li>';}).join("")+'</ul><div class="acts"><button class="btn" id="mClose">Close</button></div>';}
+  function bind(d){$("#mClose",d).onclick=closeDlg; $$("[data-a]",d).forEach(function(b){var id=b.closest("li").dataset.id, t=WS.timelines.filter(function(x){return x.id===id;})[0];
+    b.onclick=function(){var a=b.dataset.a;
+      if(a==="open"){closeDlg(); switchTo(id);}
+      else if(a==="dup"){var c=clone(t); c.origin=t.origin||t.id; c.id=uid("tl"); c.title=t.title+" (copy)"; delete c.publishedAt; c.basedOn=""; WS.timelines.push(c); saveNow(); renderBar(); openDlg(body(),bind);}
+      else if(a==="del"){
+        dlg.innerHTML='<h2>Delete “'+esc(t.title)+'”?</h2><p>This can’t be undone. Export it first if you might want it back.</p><div class="acts"><button class="btn" id="dNo">Keep it</button><button class="btn danger" id="dYes">Delete</button></div>';
+        $("#dNo",dlg).onclick=function(){openDlg(body(),bind);};
+        $("#dYes",dlg).onclick=function(){WS.timelines=WS.timelines.filter(function(x){return x!==t;}); if(!WS.timelines.length) WS.timelines=[blankTimeline()]; if(WS.current===id){WS.current=WS.timelines[0].id; T=cur(); undoStack=[]; selEv=null; pickStartDay();} saveNow(); renderAll(); openDlg(body(),bind);};
+      }};});}
+  openDlg(body(),bind);}
+function importText(text){
+  var o; try{o=JSON.parse(text);}catch(e){return {error:"That isn’t a readable timeline file."};}
+  var list=null; if(o&&Array.isArray(o.timelines)) list=o.timelines; else if(o&&(Array.isArray(o.events)||Array.isArray(o.lanes))) list=[o];
+  if(!list||!list.length) return {error:"That doesn’t look like a timeline file."};
+  var added=[], review=[]; list.slice(0,50).forEach(function(r){var t=normalize(r); delete t.publishedAt; t.basedOn="";
+    var mine=findMine(t); if(mine){review.push({theirs:t,mine:mine}); return;}
+    WS.timelines.push(t); added.push(t);});
+  saveNow(); if(added.length) switchTo(added[0].id); mergeQueue=mergeQueue.concat(review); return {count:added.length,review:review.length};
+}
+function openImport(){openDlg('<h2>Import a timeline</h2><p class="note">Choose a timeline file someone exported, or paste its contents. A new timeline is added alongside yours. If it’s a copy of one you already have, you’ll see what’s new or changed and pick what to bring in.</p><div class="form"><label>File<input type="file" id="iFile" accept=".json,application/json"></label><label>Or paste<textarea id="iText" placeholder="Paste a timeline file here"></textarea></label><p class="err" id="iErr" hidden></p></div><div class="acts"><button class="btn" id="iCancel">Cancel</button><button class="btn" id="iGo">Import</button></div>',function(d){
+  $("#iCancel",d).onclick=closeDlg;
+  function run(text){var r=importText(text); if(r.error){var e=$("#iErr",d); if(e){e.textContent=r.error; e.hidden=false;} return;} closeDlg(); if(r.count) setStatus("Imported "+r.count+" timeline"+(r.count>1?"s":"")); if(r.review) nextReview();}
+  $("#iFile",d).onchange=function(ev){var f=ev.target.files&&ev.target.files[0]; if(!f) return; if(f.size>8*1024*1024){var e=$("#iErr",d); e.textContent="That file is too large to be a timeline."; e.hidden=false; return;} var rd=new FileReader(); rd.onload=function(){run(String(rd.result));}; rd.onerror=function(){var e=$("#iErr",d); e.textContent="Couldn’t read that file."; e.hidden=false;}; rd.readAsText(f);};
+  $("#iGo",d).onclick=function(){var t=$("#iText",d).value.trim(); if(t) run(t); else {var e=$("#iErr",d); e.textContent="Choose a file or paste a timeline first."; e.hidden=false;}};});}
+function openExport(){
+  var hasSecret=WS.timelines.some(function(t){return t.events.some(function(e){return e.secret;});});
+  openDlg('<h2>Export</h2><p class="note">To send your additions to whoever keeps the timeline, download this timeline and post the file. They can import it and pick what to keep.</p><div class="form"><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="radio" name="xw" value="one" checked> This timeline, “'+esc(T.title)+'”</label><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="radio" name="xw" value="all"> All '+WS.timelines.length+' timelines</label>'+
+   '<label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="radio" name="xw" value="app"> A blank copy of Threads, as a web page for another group</label>'+
+   (hasSecret?'<label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="xSec"> Include private notes <span class="hint">Leave this off when sharing with players</span></label>':'')+
+   '<div id="xOut"></div></div><div class="acts"><button class="btn" id="xCancel">Close</button><button class="btn" id="xGo">Download file</button></div>',function(d){
+   $("#xCancel",d).onclick=closeDlg;
+   $("#xGo",d).onclick=function(){
+     var which=$("input[name=xw]:checked",d).value, all=which==="all", sec=$("#xSec",d)&&$("#xSec",d).checked;
+     var prep=function(t){var c=sec?clone(t):stripSecrets(t); delete c.basedOn; return c;};
+     var out=all?{format:"threads-workspace",version:1,exported:now(),current:WS.current,timelines:WS.timelines.map(prep)}:Object.assign(prep(T),{format:"threads-timeline",version:1,exported:now()});
+     var text=JSON.stringify(out,null,2), name=(all?"threads-timelines":slug(T.title))+".json", ext=".json";
+     if(which==="app"){ text=buildDoc({format:"threads-workspace",version:1,current:"",timelines:[]}); name="threads.html"; ext=".html"; }
+     var fallback=function(msg){$("#xOut",d).innerHTML='<p class="note">'+esc(msg)+'</p><textarea id="xTxt" readonly>'+esc(text)+'</textarea><p><button class="btn" id="xCopy">Copy to clipboard</button></p>'; var ta=$("#xTxt",d); ta.focus(); ta.select();
+       $("#xCopy",d).onclick=function(){ta.select(); var ok=false; try{ if(navigator.clipboard) {navigator.clipboard.writeText(text).then(function(){setStatus("Copied");},function(){}); ok=true;} }catch(e){} try{ok=document.execCommand("copy")||ok;}catch(e){} setStatus(ok?"Copied":"Select the text and copy it");};};
+     if(!DL){fallback("Downloads aren’t available here, so here is the file’s contents. Copy it into a text file ending in "+ext+"."); return;}
+     DL.save({filename:name,data:text}).then(function(){closeDlg(); setStatus("Exported "+name);},function(e){var c=e&&e.code; if(c==="declined") return; if(c==="extension_not_enabled"||c==="rejected_extension"){fallback("Web page downloads aren’t available here, so here is the page’s contents. Copy it into a text file ending in "+ext+"."); return;} fallback("The download didn’t go through, so here is the file’s contents to copy instead.");});
+   };});}
+function buildDoc(ws){
+  var css=$("#css").textContent, js=$("#appjs").textContent, data=JSON.stringify(ws).replace(/</g,"\\u003c");
+  return "<!doctype html>\n<html lang=\"en\">\n<head>\n"+HEAD+"<style id=\"css\">"+css+"</style>\n</head>\n<body>\n<script type=\"application/json\" id=\"seed\">"+data+"<\/script>\n<script id=\"appjs\">"+js+"<\/script>\n</body>\n</html>\n";
+}
+function openPublish(){
+  openDlg('<h2>Publish to this page</h2><p>Everyone who opens this page will see these timelines as they are now. Private notes are always left out. Other people’s own edits stay in their browsers, and they’ll be offered your new version.</p><div class="form">'+
+   WS.timelines.map(function(t,i){return '<label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" data-p="'+i+'"'+(t.id===T.id||seedTls.some(function(s){return s.id===t.id;})?" checked":"")+'> '+esc(t.title)+'</label>';}).join("")+
+   '<p class="err" id="pErr" hidden></p></div><div class="acts"><button class="btn" id="pCancel">Cancel</button><button class="btn" id="pGo">Publish</button></div>',function(d){
+   $("#pCancel",d).onclick=closeDlg;
+   $("#pGo",d).onclick=function(){
+     var picks=$$("[data-p]",d).filter(function(c){return c.checked;}).map(function(c){return WS.timelines[+c.dataset.p];});
+     if(!picks.length){var e=$("#pErr",d); e.textContent="Choose at least one timeline."; e.hidden=false; return;}
+     var at=now(), pub={format:"threads-workspace",version:1,current:(picks.indexOf(T)>=0?T.id:picks[0].id),timelines:picks.map(function(t){var c=stripSecrets(t); delete c.basedOn; c.publishedAt=at; return c;})};
+     picks.forEach(function(t){t.basedOn=at;}); saveNow();
+     var btn=$("#pGo",d); btn.disabled=true; btn.textContent="Publishing…";
+     ART.publish(buildDoc(pub)).then(function(){closeDlg(); setStatus("Published. The page will reload with your timelines.");},function(e){var c=e&&e.code, msg;
+       if(c==="conflict"){closeDlg(); setStatus("Someone published at the same moment. The page is reloading to their version."); return;}
+       if(c==="not_writer"||c==="not_granted"||c==="not_declared"){canPublish=false; closeDlg(); renderBar(); setStatus("This page is read-only for you. Export a file to share your timeline instead."); return;}
+       msg=c==="too_large"?"That’s too much to publish at once. Try fewer timelines.":c==="rate_limited"?"Publishing too often. Wait a minute and try again.":"Couldn’t publish just now. Your work is still saved in this browser.";
+       var er=$("#pErr",d); er.textContent=msg; er.hidden=false; btn.disabled=false; btn.textContent="Publish";});
+   };});}
+
+/* ---------- who's where: moving people between lanes ---------- */
+function tidyStints(c){ c.memberships.sort(function(a,b){return a.from-b.from||((a.to==null?1e9:a.to)-(b.to==null?1e9:b.to));});
+  for(var i=c.memberships.length-1;i>0;i--){var a=c.memberships[i-1], b=c.memberships[i];
+    if(a.lane===b.lane&&a.to!=null&&a.to+1>=b.from&&!a.note){a.to=(b.to==null)?null:Math.max(a.to,b.to); a.note=b.note; c.memberships.splice(i,1);}} }
+function nextStart(c,d,except){var n=c.memberships.filter(function(m){return m!==except&&m.from>d;}).sort(function(a,b){return a.from-b.from;})[0]; return n?n.from-1:null;}
+function firstLaneDay(lid){var d=null; T.events.forEach(function(e){if(e.lane===lid&&(d==null||e.day<d)) d=e.day;}); (T.characters||[]).forEach(function(c){c.memberships.forEach(function(m){if(m.lane===lid&&(d==null||m.from<d)) d=m.from;});}); return d||1;}
+/* arrival tag: none if they were with this lane the day before (or the lane is only starting),
+   "rejoins" if they were with it at some earlier point, otherwise "joins"; "from X" if they came from another lane */
+function arrivalOf(c,m,d){ if(m.from!==d||d<=firstLaneDay(m.lane)) return null;
+  if(c.memberships.some(function(x){return x!==m&&x.lane===m.lane&&x.from<d&&(x.to==null||x.to>=d-1);})) return null;
+  var p=c.memberships.filter(function(x){return x!==m&&x.lane!==m.lane&&x.from<=d&&(x.to===d||x.to===d-1);})[0], pl=p&&laneById(p.lane);
+  var before=c.memberships.some(function(x){return x!==m&&x.lane===m.lane&&x.from<d;});
+  return (before?"rejoins":"joins")+(pl?" from "+pl.name:""); }
+function departureOf(c,m,d){ if(m.to!==d) return null; if(m.note) return m.note;
+  var n=c.memberships.filter(function(x){return x!==m&&x.lane!==m.lane&&(x.from===d||x.from===d+1);})[0], l=n&&laneById(n.lane); return l?"to "+l.name:"leaves"; }
+function rosterOn(lid,d){ var ms=membersOn(lid,d); return {stay:ms.filter(function(x){return x.m.to!==d;}),dep:ms.filter(function(x){return x.m.to===d;})}; }
+function onward(c,d){return c.memberships.filter(function(m){return m.from<=d&&(m.to==null||m.to>d);})[0]||null;}
+function covers(m,d){return m.from<=d&&(m.to==null||m.to>=d);}
+/* same-day move: they leave m's lane during day d and join lane that day.
+   Going back to a lane they left earlier the same day undoes that departure instead. */
+function moveChar(c,m,d,lane){
+  if(m.lane===lane) return false;
+  var goesOn=m.to==null||m.to>d, endTo=goesOn?m.to:nextStart(c,d,m), note=goesOn?m.note:"";
+  var back=c.memberships.filter(function(x){return x!==m&&x.lane===lane&&x.to===d;})[0];
+  if(back){ back.to=endTo; back.note=note; if(m.from>=d) c.memberships.splice(c.memberships.indexOf(m),1); else { m.to=d; m.note=""; } tidyStints(c); return true; }
+  if(c.memberships.some(function(x){return x!==m&&x.lane===lane&&covers(x,d);})) return false;
+  if(goesOn){ m.to=d; m.note=""; }
+  c.memberships.push({lane:lane,from:d,to:endTo,note:note}); tidyStints(c); return true;
+}
+/* cancel a departure on day d: if they moved to another lane, that move is undone too */
+function staysAfterAll(c,m,d){
+  var dest=c.memberships.filter(function(x){return x!==m&&x.lane!==m.lane&&(x.from===d||x.from===d+1);}).sort(function(a,b){return a.from-b.from;})[0];
+  if(dest){ m.to=dest.to; m.note=dest.note; c.memberships.splice(c.memberships.indexOf(dest),1); }
+  else { m.to=nextStart(c,d,m); m.note=""; }
+  tidyStints(c); return dest?laneById(dest.lane):null;
+}
+/* add c to lane on day d, with them since day f (default d) */
+function joinChar(c,d,lane,f){ f=Math.max(1,Math.min(d,f||d));
+  if(c.memberships.some(function(x){return x.lane===lane&&covers(x,d);})) return {err:"already"};
+  if(f===d){ var m=onward(c,d); if(m){ return moveChar(c,m,d,lane)?{ok:1}:{err:"already"}; } }
+  else { var cl=c.memberships.filter(function(x){return x.lane!==lane&&x.from<=d&&(x.to==null||x.to>=f);}).sort(function(a,b){return a.from-b.from;})[0];
+    if(cl) return {err:"clash",lane:cl.lane,day:Math.max(f,cl.from)}; }
+  c.memberships.push({lane:lane,from:f,to:nextStart(c,d),note:""}); tidyStints(c); return {ok:1}; }
+var rosterLane=null;
+function rosterEditor(){
+  var dwl=dayWordL(), rl=visLanes().filter(function(l){return l.roster;}), all=T.lanes.filter(function(l){return l.roster;});
+  var h='<div class="cross" id="rosterEd"><h4>Who’s where on '+esc(dwl)+' '+sel+'</h4>';
+  if(!all.length) return h+'<p class="note">No lane is keeping track of who’s with it. Tick “Who’s here” for a lane in Timeline settings to start.</p></div>';
+  h+='<p class="note">Choose someone to move them, mark them departing, or change their dates.</p>';
+  var chip=function(x,tag){return '<button type="button" class="pchip" data-pc="'+esc(x.c.id)+'" data-pi="'+x.c.memberships.indexOf(x.m)+'">'+esc(x.c.name)+(tag?'<small>'+esc(tag)+'</small>':'')+'</button>';};
+  rl.forEach(function(l){ var r=rosterOn(l.id,sel), past=l.now!=null&&sel>l.now;
+    h+='<div class="rost" data-rl="'+esc(l.id)+'"><h5 style="color:'+esc(l.color)+'">'+esc(l.name)+'</h5><div class="pchips">'+
+      (r.stay.length?r.stay.map(function(x){return chip(x,arrivalOf(x.c,x.m,sel));}).join(""):'<span class="note">Nobody staying with them.</span>')+'</div>'+
+      (r.dep.length?'<div class="pchips dep"><span class="lbl">Departs</span>'+r.dep.map(function(x){var a=arrivalOf(x.c,x.m,sel), dp=departureOf(x.c,x.m,sel); return chip(x,(a?a+", then ":"")+dp);}).join("")+'</div>':'')+
+      (past?'<p class="note">'+esc(l.name)+' is “now at” '+esc(dwl)+' '+l.now+', so the people still with it are listed up to then. Move “Now at” on in Timeline settings to carry them forward.</p>':'')+'</div>'; });
+  if(!rosterLane||!rl.some(function(l){return l.id===rosterLane;})) rosterLane=(rl[0]||{}).id;
+  var names=(T.characters||[]).map(function(c){return c.name;}).sort();
+  h+='<div class="addp"><input type="text" id="rAddName" list="rosterNames" placeholder="Name" aria-label="Someone to add"><span>with</span><select id="rAddLane" aria-label="Lane">'+rl.map(function(l){return '<option value="'+esc(l.id)+'"'+(l.id===rosterLane?" selected":"")+'>'+esc(l.name)+'</option>';}).join("")+'</select>'+
+    '<label class="sm">from '+esc(dwl)+' <input type="number" id="rAddFrom" min="1" max="'+sel+'" value="'+sel+'" aria-label="With them from '+esc(dwl)+'"></label><button class="btn" id="rAddGo">Add</button></div>'+
+    '<p class="note" style="margin-top:4px">Leave the '+esc(dwl)+' as '+sel+' for someone joining now. Set it earlier for someone who’s been with them all along.</p>';
+  return h+'<datalist id="rosterNames">'+names.map(function(n){return '<option value="'+esc(n)+'">';}).join("")+'</datalist></div>';
+}
+function bindRoster(p){
+  var dwl=dayWordL();
+  $$("#rosterEd [data-pc]",p).forEach(function(b){ b.onclick=function(){ var c=T.characters.filter(function(x){return x.id===b.dataset.pc;})[0], m=c&&c.memberships[+b.dataset.pi]; if(m) openPerson(c,m,sel); }; });
+  var go=$("#rAddGo",p); if(!go) return; var inp=$("#rAddName",p), ls=$("#rAddLane",p);
+  ls.onchange=function(){rosterLane=ls.value;};
+  var add=function(){ var n=str(inp.value,80).trim(), lane=ls.value, f=num($("#rAddFrom",p).value,sel); if(!n||!lane) return; rosterLane=lane;
+    var c=T.characters.filter(function(x){return x.name.toLowerCase()===n.toLowerCase();})[0], made=false; snap();
+    if(!c){ c={id:uid("c"),name:n,memberships:[]}; T.characters.push(c); made=true; }
+    var r=joinChar(c,sel,lane,f);
+    if(r.err){ undoStack.pop(); if(made) T.characters.splice(T.characters.indexOf(c),1);
+      setStatus(r.err==="clash"?(c.name+" was with "+laneById(r.lane).name+" on "+dwl+" "+r.day+". Change their dates, or add them from a later "+dwl+"."):(c.name+" is already with "+laneById(lane).name+" on this "+dwl)); return; }
+    touch(); renderAll(); setStatus(c.name+" is with "+laneById(lane).name+(f<sel?" from "+dwl+" "+Math.max(1,f):" from "+dwl+" "+sel)); var ni=$("#rAddName"); if(ni) ni.focus(); };
+  go.onclick=add; inp.onkeydown=function(e){if(e.key==="Enter"){e.preventDefault(); add();}};
+}
+function openPerson(c,m,d){
+  var dwl=dayWordL(), l=laneById(m.lane), others=T.lanes.filter(function(x){return x.roster&&x.id!==m.lane;}), leaving=m.to===d;
+  var stints=c.memberships.slice().sort(function(a,b){return a.from-b.from;}).map(stintText).join(", then ");
+  openDlg('<h2>'+esc(c.name)+'</h2><p class="note">'+esc(dayWord())+' '+d+', with '+esc(l.name)+'. With '+esc(stints)+'.</p><div class="form">'+
+    '<div class="prow"><label class="sm">With '+esc(l.name)+' from '+esc(dwl)+' <input type="number" id="pmFrom" min="1" value="'+m.from+'"></label><label class="sm">until '+esc(dwl)+' <input type="number" id="pmTo" min="1" value="'+(m.to==null?"":m.to)+'" placeholder="still there"></label><button class="btn" id="pmSave">Save dates</button></div>'+
+    (others.length?'<div class="prow"><label>Moves to another lane on this '+esc(dwl)+' <span class="hint">Listed as departing '+esc(l.name)+' and joining the new lane, both on '+esc(dwl)+' '+d+'</span><select id="pmLane">'+others.map(function(o){return '<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>';}).join("")+'</select></label><button class="btn" id="pmMove">Move</button></div>':'')+
+    '<div class="prow"><label>Departs on this '+esc(dwl)+' <span class="hint">Why, if you like: dies, stays behind, captured…</span><input type="text" id="pmWhy" value="'+esc(leaving?m.note:"")+'" placeholder="Leaves"></label><button class="btn" id="pmDep">'+(leaving?'Update':'Depart')+'</button></div>'+
+    '<p class="err" id="pmErr" hidden></p></div><div class="acts">'+(leaving?'<button class="btn" id="pmStay">Stays after all</button>':'')+'<button class="btn" id="pmNot">Not with them on this '+esc(dwl)+'</button><button class="btn" id="pmDates">All stints</button><button class="btn" id="pmClose">Close</button></div>',function(dd){
+    var err=function(t){var e=$("#pmErr",dd); e.textContent=t; e.hidden=false;};
+    var fin=function(msg){closeDlg(); touch(); renderAll(); setStatus(msg);};
+    $("#pmClose",dd).onclick=closeDlg;
+    $("#pmSave",dd).onclick=function(){ var f=num($("#pmFrom",dd).value,m.from), tv=$("#pmTo",dd).value.trim(), t=tv===""?null:num(tv,m.to);
+      if(f<1) return err("The first "+dwl+" must be 1 or later."); if(t!=null&&t<f) return err("“Until” can’t be before “from”.");
+      snap(); m.from=f; m.to=t; if(t==null) m.note=""; if(f>T.dayCount) T.dayCount=f; if(t!=null&&t>T.dayCount) T.dayCount=t; tidyStints(c);
+      fin(c.name+" is with "+l.name+" from "+dwl+" "+f+(t==null?"":" to "+t)); };
+    if($("#pmMove",dd)) $("#pmMove",dd).onclick=function(){ var to=laneById($("#pmLane",dd).value); snap(); if(!moveChar(c,m,d,to.id)){ undoStack.pop(); return err(c.name+" is already with "+to.name+" then."); } fin(c.name+" leaves "+l.name+" and joins "+to.name+" on "+dwl+" "+d); };
+    $("#pmDep",dd).onclick=function(){ snap(); m.to=d; m.note=str($("#pmWhy",dd).value,120).trim(); fin(c.name+" departs "+l.name+" on "+dwl+" "+d+(m.note?" ("+m.note+")":"")); };
+    if($("#pmStay",dd)) $("#pmStay",dd).onclick=function(){ snap(); var back=staysAfterAll(c,m,d); fin(c.name+" stays with "+l.name+(back?" and doesn’t join "+back.name:"")); };
+    $("#pmNot",dd).onclick=function(){ snap(); if(m.from>=d){ if(m.to!=null&&m.to>d) m.from=d+1; else c.memberships.splice(c.memberships.indexOf(m),1); } else m.to=d-1; fin(c.name+" isn’t with "+l.name+" on "+dwl+" "+d); };
+    $("#pmDates",dd).onclick=function(){ closeDlg(); var box=$("#settingsBox"); box.dataset.open="1"; box.dataset.tab="chars"; renderSettings(); var cf=$("#charFilter"); if(cf){cf.value=c.name; cf.oninput();} var row=$('.char[data-c="'+c.id+'"]'); if(row&&row.scrollIntoView) row.scrollIntoView({block:"center"}); var ni=row&&$("[data-f=name]",row); if(ni) ni.focus(); };
+  });
+}
+function subField(e){ var n=slotsAt(e.lane,e.day); if(n<=1) return ""; var s=fluxAt(e.lane,e.day), o="";
+  for(var k=1;k<=n;k++){ var other=evAtSub(e.lane,e.day,k); o+='<option value="'+k+'"'+(k===(e.sub||1)?" selected":"")+(other&&other!==e?" disabled":"")+'>'+esc(dayWord())+' '+localDay(s,e.day,k)+' there'+(other&&other!==e?" (taken)":"")+'</option>'; }
+  return '<label id="subWrap">When there<select data-f="sub">'+o+'</select></label>'; }
+
+/* ---------- merge: bring a player's copy into yours ---------- */
+var mergeQueue=[];
+function findMine(t){
+  var by=function(f){return WS.timelines.filter(f)[0];};
+  return by(function(x){return x.id===t.id;})||(t.origin&&by(function(x){return x.id===t.origin;}))||by(function(x){return x.origin&&(x.origin===t.id||(t.origin&&x.origin===t.origin));})||null;
+}
+function sameJSON(a,b){return JSON.stringify(a)===JSON.stringify(b);}
+function clip(s,n){s=String(s||""); return s.length>n?s.slice(0,n-1)+"…":s;}
+function diffTimelines(M,R){
+  var items=[], dw=R.dayLabel||M.dayLabel||"Day", dwl=dw.toLowerCase();
+  var mineLane={}; M.lanes.forEach(function(l){mineLane[l.id]=l;});
+  var laneName=function(id){var l=mineLane[id]||R.lanes.filter(function(x){return x.id===id;})[0]; return l?l.name:"?";};
+  var needLane=function(ids){return ids.filter(function(id,i){return !mineLane[id]&&ids.indexOf(id)===i;}).map(function(id){return "lane:"+id;});};
+  var add=function(o){o.needs=o.needs||[]; items.push(o);};
+  R.lanes.forEach(function(l){
+    if(!mineLane[l.id]) add({key:"lane:"+l.id,group:"new",label:"New lane: "+l.name,apply:function(T){if(!T.lanes.some(function(x){return x.id===l.id;})) T.lanes.push({id:l.id,name:l.name,color:l.color,now:l.now,roster:l.roster});}});
+    else if(l.now!=null&&l.now!==mineLane[l.id].now) add({key:"now:"+l.id,group:"changed",label:"Where "+l.name+" is now: "+dwl+" "+l.now,detail:"Yours: "+(mineLane[l.id].now==null?"not set":dwl+" "+mineLane[l.id].now),apply:function(T){var x=T.lanes.filter(function(y){return y.id===l.id;})[0]; if(x) x.now=l.now;}});
+  });
+  var F=[["title","title"],["where","place"],["status","status"],["summary","summary"],["notes","notes"]];
+  R.events.forEach(function(e){
+    var byId=M.events.filter(function(x){return x.id===e.id;})[0], m=byId||M.events.filter(function(x){return x.lane===e.lane&&x.day===e.day&&(x.sub||1)===(e.sub||1);})[0];
+    var where=dw+" "+e.day+", "+laneName(e.lane)+": "+e.title;
+    if(!m){ add({key:"ev:"+e.id,group:"new",label:where,detail:clip(e.summary||e.beats.join(". "),160),needs:needLane([e.lane]),
+      apply:function(T){ if((e.sub||1)>fastSlots(T,e.lane,e.day)||T.events.some(function(x){return x.lane===e.lane&&x.day===e.day&&(x.sub||1)===(e.sub||1);})) return false; var c=clone(e); c.secret=""; if(T.events.some(function(x){return x.id===c.id;})) c.id=uid("e"); T.events.push(c); }}); return; }
+    var what=[], show=[], moved=(m.lane!==e.lane||m.day!==e.day||(m.sub||1)!==(e.sub||1));
+    F.forEach(function(f){ if(e[f[0]]!==m[f[0]]&&(e[f[0]]||f[0]!=="notes"||m[f[0]])){ what.push(f[1]+" changed"); if(f[0]!=="status"&&e[f[0]]) show.push(f[1].charAt(0).toUpperCase()+f[1].slice(1)+": "+clip(e[f[0]],300)); else if(f[0]==="status") show.push("Status: "+STATUS[e.status].label); } });
+    if(!sameJSON(e.beats,m.beats)){ var newB=e.beats.filter(function(b){return m.beats.indexOf(b)<0;}), gone=m.beats.filter(function(b){return e.beats.indexOf(b)<0;});
+      what.push(newB.length&&!gone.length?("adds "+newB.length+" beat"+(newB.length>1?"s":"")):"beats changed"); newB.forEach(function(b){show.push("+ "+clip(b,200));}); }
+    if(!sameJSON(e.quotes,m.quotes)){ var key=function(q){return q.who+"|"+q.text;}, mk=m.quotes.map(key), nq=e.quotes.filter(function(q){return mk.indexOf(key(q))<0;}), ek=e.quotes.map(key), gq=m.quotes.filter(function(q){return ek.indexOf(key(q))<0;});
+      what.push(nq.length&&!gq.length?("adds "+nq.length+" quote"+(nq.length>1?"s":"")):"quotes changed"); nq.forEach(function(q){show.push("“"+clip(q.text,200)+"”"+(q.who?" "+q.who:""));}); }
+    var blocked=false;
+    if(moved&&byId){ var occ=M.events.filter(function(x){return x!==m&&x.lane===e.lane&&x.day===e.day&&(x.sub||1)===(e.sub||1);})[0]; if(occ) blocked=true; what.unshift("moved from "+dwl+" "+m.day+(m.lane!==e.lane?" on "+laneName(m.lane):"")); }
+    if(!what.length) return;
+    add({key:"ev:"+m.id,group:"changed",label:where,detail:what.join(", "),show:show,blocked:blocked&&("Can’t move it: you already have an event there."),needs:needLane([e.lane]),
+      apply:function(T){ var x=T.events.filter(function(y){return y.id===m.id;})[0]; if(!x) return false; if(moved&&((e.sub||1)>fastSlots(T,e.lane,e.day)||T.events.some(function(y){return y!==x&&y.lane===e.lane&&y.day===e.day&&(y.sub||1)===(e.sub||1);}))) return false;
+        ["lane","day","title","where","status","summary","notes"].forEach(function(f){x[f]=e[f];}); if(e.sub) x.sub=e.sub; else delete x.sub; x.beats=e.beats.slice(); x.quotes=clone(e.quotes); }});
+  });
+  var xl=function(c){return laneName(c.from.lane)+" "+c.from.day+" to "+laneName(c.to.lane)+" "+c.to.day;};
+  R.crossings.forEach(function(c){
+    var m=M.crossings.filter(function(x){return x.id===c.id;})[0]||M.crossings.filter(function(x){return sameJSON(x.from,c.from)&&sameJSON(x.to,c.to);})[0];
+    if(!m) add({key:"x:"+c.id,group:"new",label:"Connection, "+xl(c),detail:clip(c.text,160),needs:needLane([c.from.lane,c.to.lane]),apply:function(T){var k=clone(c); if(T.crossings.some(function(y){return y.id===k.id;})) k.id=uid("x"); T.crossings.push(k);}});
+    else if(!sameJSON([m.from,m.to,m.text],[c.from,c.to,c.text])) add({key:"x:"+m.id,group:"changed",label:"Connection, "+xl(c),detail:clip(c.text,160),needs:needLane([c.from.lane,c.to.lane]),apply:function(T){var y=T.crossings.filter(function(z){return z.id===m.id;})[0]; if(!y) return false; y.from=clone(c.from); y.to=clone(c.to); y.text=c.text;}});
+  });
+  R.spans.forEach(function(s){
+    var m=M.spans.filter(function(x){return x.id===s.id;})[0]||M.spans.filter(function(x){return x.lane===s.lane&&x.from===s.from&&x.to===s.to;})[0];
+    var lab="Span on "+laneName(s.lane)+", "+dwl+"s "+s.from+" to "+s.to+(s.label?": "+s.label:"")+(s.flux?(", time runs "+(s.flux.mode==="fast"?"faster":"slower")):"");
+    if(!m) add({key:"s:"+s.id,group:"new",label:lab,needs:needLane([s.lane]),apply:function(T){var k=clone(s); if(T.spans.some(function(y){return y.id===k.id;})) k.id=uid("s"); T.spans.push(k);}});
+    else if(!sameJSON([m.lane,m.from,m.to,m.label,m.color,m.flux],[s.lane,s.from,s.to,s.label,s.color,s.flux])) add({key:"s:"+m.id,group:"changed",label:lab,needs:needLane([s.lane]),apply:function(T){var y=T.spans.filter(function(z){return z.id===m.id;})[0]; if(!y) return false; var keep=clone(y); y.lane=s.lane; y.from=s.from; y.to=s.to; y.label=s.label; y.color=s.color; y.flux=s.flux?clone(s.flux):null;
+      if(T.events.some(function(ev){return ev.sub&&ev.sub>fastSlots(T,ev.lane,ev.day);})){Object.keys(keep).forEach(function(k){y[k]=keep[k];}); return false;}}});
+  });
+  Object.keys(R.dayNotes).forEach(function(k){ var v=R.dayNotes[k], mv=M.dayNotes[k]; if(v===mv) return;
+    add({key:"dn:"+k,group:mv?"changed":"new",label:"Notes for "+dwl+" "+k,detail:clip(v,200),apply:function(T){T.dayNotes[k]=v;}}); });
+  var stints=function(c){return c.memberships.slice().sort(function(a,b){return a.from-b.from;}).map(function(m){var n=laneName(m.lane); return m.to==null?(n+" from "+dwl+" "+m.from):(m.from===m.to?(n+" on "+dwl+" "+m.from):(n+", "+dwl+"s "+m.from+" to "+m.to))+(m.note?" ("+m.note+")":"");}).join(", then ");};
+  R.characters.forEach(function(c){
+    var m=M.characters.filter(function(x){return x.id===c.id;})[0]||M.characters.filter(function(x){return x.name.toLowerCase()===c.name.toLowerCase();})[0];
+    var lanes=c.memberships.map(function(x){return x.lane;});
+    if(!m) add({key:"c:"+c.id,group:"new",label:"Character: "+c.name,detail:stints(c)?"With "+stints(c):"",needs:needLane(lanes),apply:function(T){var k=clone(c); if(T.characters.some(function(y){return y.id===k.id;})) k.id=uid("c"); T.characters.push(k);}});
+    else if(!sameJSON(c.memberships,m.memberships)||c.name!==m.name) add({key:"c:"+m.id,group:"changed",label:"Character: "+c.name,detail:"With "+stints(c),needs:needLane(lanes),apply:function(T){var y=T.characters.filter(function(z){return z.id===m.id;})[0]; if(!y) return false; y.name=c.name; y.memberships=clone(c.memberships);}});
+  });
+  // an event placed within a stretched day needs the span that stretches it
+  items.forEach(function(it){ if(it.key.indexOf("ev:")) return; var e=R.events.filter(function(x){return "ev:"+x.id===it.key;})[0]||R.events.filter(function(x){return M.events.some(function(m){return "ev:"+m.id===it.key&&m.id===x.id;});})[0];
+    if(!e||!e.sub) return; R.spans.forEach(function(s){ if(s.flux&&s.flux.mode==="fast"&&s.lane===e.lane&&s.from<=e.day&&e.day<=s.to){ var k=items.filter(function(o){return o.key==="s:"+s.id||(o.key.indexOf("s:")===0&&M.spans.some(function(ms){return "s:"+ms.id===o.key&&(ms.id===s.id||(ms.lane===s.lane&&ms.from===s.from&&ms.to===s.to));}));})[0]; if(k&&it.needs.indexOf(k.key)<0) it.needs.push(k.key);} }); });
+  return items;
+}
+function fitDayCount(T){var mx=T.dayCount; T.events.forEach(function(e){mx=Math.max(mx,e.day);}); T.spans.forEach(function(s){mx=Math.max(mx,s.to);}); T.crossings.forEach(function(c){mx=Math.max(mx,c.from.day,c.to.day);});
+  T.characters.forEach(function(c){c.memberships.forEach(function(m){mx=Math.max(mx,m.to||m.from);});}); T.lanes.forEach(function(l){if(l.now!=null) mx=Math.max(mx,l.now);}); Object.keys(T.dayNotes).forEach(function(k){mx=Math.max(mx,+k);}); T.dayCount=Math.min(2000,mx);}
+function addAsCopy(R,M){var c=clone(R); c.origin=(M&&(M.origin||M.id))||R.origin||R.id; c.id=uid("tl"); c.title=R.title+" (imported)"; delete c.publishedAt; c.basedOn=""; WS.timelines.push(c); saveNow(); switchTo(c.id); return c;}
+function nextReview(){ if(!mergeQueue.length) return; var job=mergeQueue.shift(); openReview(job.theirs,job.mine); }
+function openReview(R,M){
+  var items=diffTimelines(M,R), dw=(M.dayLabel||"Day").toLowerCase();
+  var copyBtn='<button class="btn" id="mCopy">Add as a separate copy</button>';
+  if(!items.length){ openDlg('<h2>Nothing new</h2><p>“'+esc(R.title)+'” has nothing your copy of “'+esc(M.title)+'” doesn’t already have.</p><div class="acts"><button class="btn" id="mClose">Close</button>'+copyBtn+'</div>',function(d){
+      $("#mClose",d).onclick=function(){closeDlg(); nextReview();}; $("#mCopy",d).onclick=function(){closeDlg(); addAsCopy(R,M); setStatus("Added “"+R.title+"” as a separate copy"); nextReview();};}); return; }
+  var row=function(it,i){return '<li class="mi'+(it.blocked?' off':'')+'"><label><input type="checkbox" data-k="'+i+'"'+(it.blocked?' disabled':' checked')+'><span><b>'+esc(it.label)+'</b>'+(it.detail?'<small>'+esc(it.detail)+'</small>':'')+(it.blocked?'<small class="err">'+esc(it.blocked)+'</small>':'')+'</span></label>'+
+    (it.show&&it.show.length?'<details><summary>Show theirs</summary><ul>'+it.show.map(function(s){return '<li>'+esc(s)+'</li>';}).join("")+'</ul></details>':'')+'</li>';};
+  var grp=function(g,title){var h=""; items.forEach(function(it,i){if(it.group===g) h+=row(it,i);}); return h?'<h3>'+title+'</h3><ul class="mlist">'+h+'</ul>':"";};
+  openDlg('<h2>Changes in “'+esc(R.title)+'”</h2><p class="note">Compared with your copy of “'+esc(M.title)+'”. Tick what to bring in. Nothing is removed from your copy, private notes in the file are ignored, and you can undo it.</p>'+
+    '<div class="mtools"><button class="btn quiet" id="mAll">Select all</button><button class="btn quiet" id="mNone">Select none</button><span class="note" id="mCount"></span></div>'+
+    '<div class="merge" id="mBox">'+grp("new","New")+grp("changed","Changed")+'</div>'+
+    '<div class="acts"><button class="btn" id="mCancel">Not now</button>'+copyBtn+'<button class="btn" id="mGo">Bring them in</button></div>',function(d){
+    var boxes=$$("[data-k]",d), byKey={}, boxOf={}; items.forEach(function(it,i){byKey[it.key]=i;}); boxes.forEach(function(b){boxOf[b.dataset.k]=b;});
+    var count=function(){var n=boxes.filter(function(b){return b.checked;}).length; $("#mCount",d).textContent=n+" of "+boxes.filter(function(b){return !b.disabled;}).length+" chosen"; $("#mGo",d).disabled=!n; $("#mGo",d).textContent=n?("Bring in "+n):"Bring them in";};
+    boxes.forEach(function(b){b.onchange=function(){var it=items[+b.dataset.k];
+      if(b.checked) it.needs.forEach(function(k){var j=byKey[k]; if(j!=null&&boxOf[j]) boxOf[j].checked=true;});
+      else items.forEach(function(o,j){if(o.needs.indexOf(it.key)>=0&&boxOf[j]) boxOf[j].checked=false;});
+      count();};});
+    $("#mAll",d).onclick=function(){boxes.forEach(function(b){if(!b.disabled) b.checked=true;}); count();};
+    $("#mNone",d).onclick=function(){boxes.forEach(function(b){b.checked=false;}); count();};
+    $("#mCancel",d).onclick=function(){closeDlg(); nextReview();};
+    $("#mCopy",d).onclick=function(){closeDlg(); addAsCopy(R,M); setStatus("Added “"+R.title+"” as a separate copy"); nextReview();};
+    $("#mGo",d).onclick=function(){
+      var pick=boxes.filter(function(b){return b.checked;}).map(function(b){return items[+b.dataset.k];});
+      if(M.id!==T.id) switchTo(M.id);
+      var rank=function(it){return it.key.indexOf("lane:")===0?0:it.key.indexOf("s:")===0?1:2;}; pick.sort(function(a,b){return rank(a)-rank(b);});
+      snap(); var done=0, skipped=0; pick.forEach(function(it){ if(it.apply(T)===false) skipped++; else done++; });
+      fitDayCount(T); touch(); closeDlg(); renderAll();
+      setStatus("Brought in "+done+" change"+(done===1?"":"s")+" from “"+R.title+"”"+(skipped?(". "+skipped+" couldn’t be applied"):"")+". Undo is in edit mode.");
+      nextReview();
+    };
+    count();
+  });
+}
+
+/* ---------- help ---------- */
+function openHelp(){
+  var dwl=dayWordL(), keeper=!!(ART&&canPublish);
+  openDlg('<h2>How Threads works</h2><div class="help">'+
+    '<h3>Reading it</h3><p>Each event shows its lane, title, place and summary; choose it to open the beats, quotes and notes, or use Show all details. Each coloured thread is a lane: a party, a character, or a strand of world events. Pick a '+esc(dwl)+' on the timeline, or use the arrow keys, to read what every lane was doing then, where the lanes touch, and who was with whom. The lane buttons above the timeline hide and show lanes.</p>'+
+    '<h3>Following someone</h3><p>Type a name in Follow to light up every '+esc(dwl)+' they appear. Characters who move between groups have their path drawn across the lanes.</p>'+
+    '<h3>Who’s where</h3><p>Lanes that people travel with list who’s with them on each '+esc(dwl)+'. Anyone leaving a lane is listed under Departs, with why: moving to another lane, dying, staying behind. Someone who moves partway through a '+esc(dwl)+' shows as departing one lane and joining the other on that '+esc(dwl)+'. Someone is marked as joining only if they weren’t with that lane the '+esc(dwl)+' before, and as rejoining if they’ve been with it earlier. In edit mode, choose a name in the '+esc(dwl)+' panel to move them, mark them departing, or change their dates, and add people with the box underneath; its “from” '+esc(dwl)+' can be set earlier for someone who’s been there all along. Turn the list on or off for each lane in Timeline settings.</p>'+
+    '<h3>Fixing the calendar</h3><p>Missed a '+esc(dwl)+' for one party? In edit mode, select the '+esc(dwl)+' and choose Insert a '+esc(dwl)+' here in that lane’s block: that lane’s later '+esc(dwl)+'s move along one, and every other lane stays put. Remove this '+esc(dwl)+' does the reverse. The buttons under the timeline do the same for every lane at once.</p>'+
+    '<h3>When time runs differently</h3><p>A span can say that time runs faster or slower there, say in another realm. Faster time stretches those '+esc(dwl)+'s so several '+esc(dwl)+'s there fit into each one here, each with its own spot for an event. Slower time joins each run of '+esc(dwl)+'s here into one '+esc(dwl)+' there, with a single spot for its event. Every event shows its local '+esc(dwl)+'.</p>'+
+    '<h3>Adding your own notes</h3><p>Choose Edit to add or change anything. Click anywhere on a '+esc(dwl)+' to select it; clicking an empty spot on a lane highlights that lane in the '+esc(dwl)+' panel below, where Add an event creates one there. Clicking an event selects its '+esc(dwl)+' and highlights it in the panel; double-click it, or choose its Edit button, to change it. Your edits stay in this browser as your own copy, and nobody else sees them. Private notes are for you alone and never leave your copy unless you choose to export them.</p>'+
+    '<h3>Sending additions to whoever keeps the timeline</h3><p>Choose Export, download this timeline, and post the file wherever your group talks. They import it, see exactly what you added or changed, and pick what to keep.</p>'+
+    '<h3>'+(keeper?'Keeping the timeline (that’s you)':'Keeping the timeline')+'</h3><p>Import a file someone sent you and Threads compares it with your copy, listing their new and changed entries with a tick box each. Bring in what you want, then '+(keeper?'choose Publish to this page':'publish it')+' so everyone gets the new version. Nothing of yours is removed, and Undo takes it back.</p>'+
+    '<h3>When the page is updated</h3><p>If a newer version is published, you’re asked whether to load it, keep it alongside your copy, or keep yours.</p>'+
+    '<h3>Starting another campaign</h3><p>New timeline starts a fresh one here, in your browser. For another group entirely, Export can download a blank copy of Threads as a single web page they can open in any browser or host themselves.</p>'+
+    '</div><div class="acts"><button class="btn" id="hClose">Close</button></div>',function(d){$("#hClose",d).onclick=closeDlg;});
+}
+
+/* ---------- render all ---------- */
+function renderAll(){ if(!T) T=cur(); if(sel>T.dayCount) sel=T.dayCount; renderHeader(); renderBar(); renderNotices(); renderSettings(); renderFollowSoft(); renderLaneLabels(); draw(); renderDayOps(); renderLegend(); renderPanel(); rememberView(); }
+renderAll(); setStatus(statusText||"Saved in this browser");
+requestAnimationFrame(function(){scrollToSel(false);});
+
+/* ---------- capabilities, lit up when they arrive ---------- */
+var C=window.claude;
+if(C&&typeof C.use==="function"){
+  C.use("downloads").then(function(ns){DL=ns;},function(){});
+  C.use("artifact").then(function(ns){ART=ns; if(!ART) return;
+    renderBar();
+    C.use("user").then(function(us){ if(!us||typeof us.canEdit!=="function") return; Promise.resolve(us.canEdit()).then(function(v){ if(v===false){canPublish=false; renderBar();} },function(){}); },function(){});
+  },function(){});
+}
+})();
+</script>
+</body>
+</html>
