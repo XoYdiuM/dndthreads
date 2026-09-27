@@ -1,6 +1,6 @@
 # Threads: quick start guide
 
-*Last updated September 26, 2026, for Threads 1.0.0.*
+*Last updated September 26, 2026, for Threads 1.0.1.*
 
 ## What Threads is
 

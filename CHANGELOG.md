@@ -6,6 +6,12 @@ All notable changes to Threads are listed here, newest first. Versions follow [s
 
 Nothing yet.
 
+## [1.0.1] - 2026-09-26
+
+### Fixed
+
+- On self-hosted pages, Export now saves a real `.json` file, or `.html` for a blank copy of the app, instead of showing the text to copy. The text is still shown if a browser can't save files.
+
 ## [1.0.0] - 2026-09-26
 
 The first public release.
@@ -55,5 +61,6 @@ The first public release.
 - Built-in help, and a link to the full guide.
 - The version number and credit in the footer.
 
-[Unreleased]: https://github.com/XoYdiuM/dndthreads/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/XoYdiuM/dndthreads/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/XoYdiuM/dndthreads/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/XoYdiuM/dndthreads/releases/tag/v1.0.0
