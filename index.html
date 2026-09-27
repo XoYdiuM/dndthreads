@@ -257,8 +257,11 @@ a.btn{display:inline-flex;align-items:center;text-decoration:none}
  whose hidden part matches Follow opens itself and says so. Events with
  nothing more to show stay plain articles. The editor preview is never folded.
  DOWNLOADS. On claude.ai, Export saves through the downloads capability (DL).
- Elsewhere (no window.claude) browserSave() saves a Blob through a download
- link; if that fails, Export shows the text to copy.
+ Elsewhere (no window.claude), browsers with showSaveFilePicker (Chrome, Edge
+ on desktop) get a Save as window (saveAs), so a file can be replaced under
+ the same name; cancelling it does nothing. Other browsers, or a picker that
+ isn't allowed (e.g. in a frame), use browserSave(), a Blob download link; if
+ that fails too, Export shows the text to copy.
  VERSION & CREDIT. THREADS_VERSION follows semantic versioning; bump it and
  add an entry to CHANGELOG.md in the repo (REPO_URL) with every release. The
  footer, help and welcome show it with links to the guide and changelog.
@@ -319,13 +322,13 @@ a.btn{display:inline-flex;align-items:center;text-decoration:none}
  (24 checks on joins/rejoins, same-day moves, stays after all, adding people
  and selecting in edit mode), test8.js (13 checks on the folding day
  summary), test9.js (16 checks on the welcome screen, version and links) and
- test10.js (8 checks on downloads for self-hosted pages); test4 to test10
- work with any seed. 227 in all. Run them after every change before republishing.
+ test10.js (14 checks on downloads and Save as for self-hosted pages); test4
+ to test10 work with any seed. 233 in all. Run them after every change before republishing.
 ============================================================================ */
 (function(){
 "use strict";
 var LS_KEY="threads-workspace-v1";
-var THREADS_VERSION="1.0.1", REPO_URL="https://github.com/XoYdiuM/dndthreads", GUIDE_URL=REPO_URL+"/blob/main/GUIDE.md", CHANGES_URL=REPO_URL+"/blob/main/CHANGELOG.md";
+var THREADS_VERSION="1.0.2", REPO_URL="https://github.com/XoYdiuM/dndthreads", GUIDE_URL=REPO_URL+"/blob/main/GUIDE.md", CHANGES_URL=REPO_URL+"/blob/main/CHANGELOG.md";
 function extLink(href,text,cls){return '<a href="'+href+'" target="_blank" rel="noopener"'+(cls?' class="'+cls+'"':'')+'>'+text+'</a>';}
 function creditHTML(){return '<span>Threads '+THREADS_VERSION+'</span>'+extLink(CHANGES_URL,'What’s new')+extLink(GUIDE_URL,'Full guide')+'<span>Created by '+extLink(REPO_URL,'XoYdiuM')+' with Claude</span>';}
 var HEAD='<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<title>Threads</title>\n<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,600;1,400&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">\n';
@@ -974,7 +977,7 @@ function openExport(){
   openDlg('<h2>Export</h2><p class="note">To send your additions to whoever keeps the timeline, download this timeline and post the file. They can import it and pick what to keep.</p><div class="form"><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="radio" name="xw" value="one" checked> This timeline, “'+esc(T.title)+'”</label><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="radio" name="xw" value="all"> All '+WS.timelines.length+' timelines</label>'+
    '<label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="radio" name="xw" value="app"> A blank copy of Threads, as a web page for another group</label>'+
    (hasSecret?'<label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="xSec"> Include private notes <span class="hint">Leave this off when sharing with players</span></label>':'')+
-   '<div id="xOut"></div></div><div class="acts"><button class="btn" id="xCancel">Close</button><button class="btn" id="xGo">Download file</button></div>',function(d){
+   '<div id="xOut"></div></div><div class="acts"><button class="btn" id="xCancel">Close</button><button class="btn" id="xGo">'+(canSaveAs()?'Save as…':'Download file')+'</button></div>',function(d){
    $("#xCancel",d).onclick=closeDlg;
    $("#xGo",d).onclick=function(){
      var which=$("input[name=xw]:checked",d).value, all=which==="all", sec=$("#xSec",d)&&$("#xSec",d).checked;
@@ -985,11 +988,21 @@ function openExport(){
      var fallback=function(msg){$("#xOut",d).innerHTML='<p class="note">'+esc(msg)+'</p><textarea id="xTxt" readonly>'+esc(text)+'</textarea><p><button class="btn" id="xCopy">Copy to clipboard</button></p>'; var ta=$("#xTxt",d); ta.focus(); ta.select();
        $("#xCopy",d).onclick=function(){ta.select(); var ok=false; try{ if(navigator.clipboard) {navigator.clipboard.writeText(text).then(function(){setStatus("Copied");},function(){}); ok=true;} }catch(e){} try{ok=document.execCommand("copy")||ok;}catch(e){} setStatus(ok?"Copied":"Select the text and copy it");};};
      if(!DL){
-       if(!window.claude&&browserSave(name,text,ext===".html"?"text/html":"application/json")){ closeDlg(); setStatus("Downloaded "+name+". Check your downloads folder."); return; }
+       var mime=ext===".html"?"text/html":"application/json";
+       var dl=function(){ if(!window.claude&&browserSave(name,text,mime)){ closeDlg(); setStatus("Downloaded "+name+". Check your downloads folder."); return true; } return false; };
+       if(canSaveAs()){ saveAs(name,text,mime,ext).then(function(saved){ closeDlg(); setStatus("Saved "+saved); },function(e){
+           if(e&&e.name==="AbortError") return;
+           if(!dl()) fallback("Downloads aren’t available here, so here is the file’s contents. Copy it into a text file ending in "+ext+"."); }); return; }
+       if(dl()) return;
        fallback("Downloads aren’t available here, so here is the file’s contents. Copy it into a text file ending in "+ext+"."); return;}
      DL.save({filename:name,data:text}).then(function(){closeDlg(); setStatus("Exported "+name);},function(e){var c=e&&e.code; if(c==="declined") return; if(c==="extension_not_enabled"||c==="rejected_extension"){fallback("Web page downloads aren’t available here, so here is the page’s contents. Copy it into a text file ending in "+ext+"."); return;} fallback("The download didn’t go through, so here is the file’s contents to copy instead.");});
    };});}
 /* self-hosted pages: let the browser save the file (claude.ai pages use the downloads capability instead) */
+/* Chrome and Edge on a computer: a real Save as window, so a file can be replaced under the same name */
+function canSaveAs(){ return !window.claude&&typeof window.showSaveFilePicker==="function"; }
+function saveAs(name,text,mime,ext){
+  return window.showSaveFilePicker({id:"threads-export",suggestedName:name,types:[{description:ext===".html"?"Web page":"Threads timeline",accept:(function(){var o={}; o[mime]=[ext]; return o;})()}]})
+    .then(function(h){ return h.createWritable().then(function(w){ return Promise.resolve(w.write(text)).then(function(){return w.close();}); }).then(function(){ return h.name||name; }); }); }
 function browserSave(name,text,mime){
   try{ var blob=new Blob([text],{type:mime+";charset=utf-8"}), url=URL.createObjectURL(blob), a=document.createElement("a");
     a.href=url; a.download=name; a.rel="noopener"; a.style.display="none"; document.body.appendChild(a); a.click();

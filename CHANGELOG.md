@@ -6,6 +6,12 @@ All notable changes to Threads are listed here, newest first. Versions follow [s
 
 Nothing yet.
 
+## [1.0.2] - 2026-09-26
+
+### Changed
+
+- On self-hosted pages in Chrome and Edge on a computer, Export opens a Save as window, so you can choose where the file goes and replace an older copy under the same name. Other browsers still save to the downloads folder.
+
 ## [1.0.1] - 2026-09-26
 
 ### Fixed
@@ -61,6 +67,7 @@ The first public release.
 - Built-in help, and a link to the full guide.
 - The version number and credit in the footer.
 
-[Unreleased]: https://github.com/XoYdiuM/dndthreads/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/XoYdiuM/dndthreads/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/XoYdiuM/dndthreads/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/XoYdiuM/dndthreads/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/XoYdiuM/dndthreads/releases/tag/v1.0.0

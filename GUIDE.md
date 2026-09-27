@@ -1,6 +1,6 @@
 # Threads: quick start guide
 
-*Last updated September 26, 2026, for Threads 1.0.1.*
+*Last updated September 26, 2026, for Threads 1.0.2.*
 
 ## What Threads is
 
@@ -73,7 +73,7 @@ Because your copy lives in one browser, a different device or browser starts fre
 Wrote up your party's session, or spotted something missing? Send it to whoever keeps the shared timeline:
 
 1. Choose **Export**, pick **This timeline**, and leave "Include private notes" unchecked.
-2. Save the file. If your browser can't download it, Threads shows the text instead: copy it into a file ending in `.json`.
+2. Save the file. In Chrome or Edge on a computer you get a Save as window, so you can replace an older copy under the same name; other browsers save it to your downloads folder. If your browser can't save it at all, Threads shows the text instead: copy it into a file ending in `.json`.
 3. Post the file wherever your group talks, such as Discord or your play-by-post thread.
 
 The keeper sees exactly what you added or changed and picks what to keep. Nothing of theirs is removed by your file, and your private notes are never included.
